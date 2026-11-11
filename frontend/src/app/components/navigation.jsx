@@ -114,12 +114,8 @@ export function Top({ page, setPage, admin = false, onMenu }) {
           <UserMenu admin setPage={setPage} />
         </>
       ) : sessionStorage.getItem("medi-slot-token") ? (
-        <UserMenu setPage={setPage} />
-      ) : (
-        <Btn className="top-login" onClick={() => setPage("login")}>
-          Login
-        </Btn>
-      )}
+          <UserMenu setPage={setPage} />
+      ) : null}
     </header>
   );
 }
