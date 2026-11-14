@@ -9,8 +9,8 @@ spring:
     name: medi-slot-backend
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/medislot_db}
-    username: postgres
-    password: Amrit@2004
+    username: username
+    password: password
   jpa:
     open-in-view: false
     defer-datasource-initialization: true
