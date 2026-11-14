@@ -1,49 +1,32 @@
-import React, { useEffect, useState } from "react";
-import {
-  CalendarDays,
-  MapPin,
-  Search,
-  ArrowRight,
-  Building2,
-  HeartPulse,
-  ShieldCheck,
-  Clock3,
-  Star,
-  ChevronLeft,
-  Check,
-  X,
-  UserRound,
-  LayoutDashboard,
-  Hospital,
-  Stethoscope,
-  ClipboardList,
-  Bell,
-  Settings,
-  FileText,
-  Menu,
-  Download,
-  Plus,
-  MoreHorizontal,
-  Pencil,
-  Trash2,
-} from "lucide-react";
-export function Logo({ admin = false, onHome }) {
+import React from "react";
+import { Activity } from "lucide-react";
+
+export function Logo({ admin = false, dark = false, onHome }) {
   return (
     <button
       type="button"
-      className={"logo " + (admin ? "admin-logo" : "")}
+      className={"logo" + (dark ? " on-dark" : "")}
       onClick={onHome}
-      aria-label="Go to home"
+      aria-label="MediSlot home"
     >
-      <img src="/motherson-logo.png" alt="Motherson" />
-      {admin && <small>Hospital Admin</small>}
+      <span className="logo-mark">
+        <Activity strokeWidth={2.4} />
+      </span>
+      <span className="logo-word">
+        Medi<b>Slot</b>
+      </span>
+      {admin && <small>Admin</small>}
     </button>
   );
 }
 export function Avatar({ doctor, size = "" }) {
   return (
-    <div className={"avatar " + size} style={{ background: doctor?.color }}>
-      {doctor?.image ? <img className="avatar-img" src={doctor.image} alt={doctor.name || ""} /> : doctor?.initial || "AS"}
+    <div className={"avatar " + size}>
+      {doctor?.image ? (
+        <img className="avatar-img" src={doctor.image} alt={doctor.name || ""} />
+      ) : (
+        doctor?.initial || "MS"
+      )}
     </div>
   );
 }

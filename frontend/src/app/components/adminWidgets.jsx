@@ -46,15 +46,6 @@ export const Stat = ({ label, num, type }) => (
     <div>
       <small>{label}</small>
       <b>{num}</b>
-      <em>
-        {type === "today"
-          ? "+2 from yesterday"
-          : type === "confirmed"
-            ? "67% of total"
-            : type === "pending"
-              ? "25% of total"
-              : "8% of total"}
-      </em>
     </div>
   </div>
 );

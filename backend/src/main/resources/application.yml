@@ -10,7 +10,7 @@ spring:
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/medislot_db}
     username: postgres
-    password: Mtc@1234
+    password: Amrit@2004
   jpa:
     open-in-view: false
     defer-datasource-initialization: true

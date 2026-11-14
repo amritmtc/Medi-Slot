@@ -132,7 +132,7 @@ export const mapHospital = (hospital) => ({
       /^, /,
       "",
     ),
-  desc: `Open ${hospital.openingTime || "09:00"} – ${hospital.closingTime || "17:00"}`,
+  desc: `Open ${(hospital.openingTime || "09:00").slice(0, 5)} – ${(hospital.closingTime || "17:00").slice(0, 5)}`,
   doctors: hospital.doctorCount || "",
   photo: "city",
   image: hospital.imageUrl || null,

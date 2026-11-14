@@ -1,11 +1,9 @@
 import React, { useCallback, useReducer, useState } from "react";
 import "../styles.css";
-import "../admin.css";
-import "../enhancements.css";
-import "../admin-interactions.css";
 import {
   Home,
   Login,
+  Signup,
   Hospitals,
   Doctors,
   HospitalExplore,
@@ -39,6 +37,7 @@ export default function App() {
   const pages = {
     home: <Home setPage={setPage} isAuthenticated={isAuthenticated} />,
     login: <Login setPage={setPage} />,
+    signup: <Signup setPage={setPage} />,
     hospitals: <Hospitals setPage={setPage} />,
     hospitalExplore: <HospitalExplore setPage={setPage} />,
     doctors: <Doctors setPage={setPage} />,
@@ -67,11 +66,6 @@ export default function App() {
   if (current === "superAdmin" && role !== "superAdmin") current = "login";
   return (
     <>
-      {current === "home" && !isAuthenticated && (
-        <div className="login-float">
-          <button onClick={() => setPage("login")}>Login</button>
-        </div>
-      )}
       {pages[current]}
     </>
   );

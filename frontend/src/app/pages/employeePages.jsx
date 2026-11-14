@@ -21,6 +21,9 @@ import {
   Settings,
   FileText,
   Menu,
+  Lock,
+  Eye,
+  EyeOff,
   Download,
   Plus,
   MoreHorizontal,
@@ -31,6 +34,7 @@ import { api, saveSession } from "../../api";
 import { mapHospital, mapDoctor } from "../data/mockData";
 import { Logo, Avatar, Btn } from "../components/ui";
 import { EmployeeLayout, AdminLayout, Top } from "../components/navigation";
+import { AuthShell } from "../components/auth";
 import {
   Stat,
   Chart,
@@ -40,72 +44,160 @@ import {
   DoctorTable,
   FormGroup,
 } from "../components/adminWidgets";
+const STEPS = [
+  ["Pick a hospital", "Browse the partner hospitals near your plant and see what each one offers."],
+  ["Choose a specialist", "Filter by department, check who is available on your day and read their profile."],
+  ["Book a slot", "Select a time that fits your shift and get an instant confirmation."],
+];
+const SYMPTOMS = [
+  { label: "Chest discomfort", dept: "Cardiology", note: "Heart and blood-pressure concerns." },
+  { label: "Fever or cough", dept: "General Medicine", note: "Everyday illness and first checks." },
+  { label: "Joint or back pain", dept: "Orthopedics", note: "Bones, joints, muscles and injuries." },
+  { label: "Rash or itching", dept: "Dermatology", note: "Skin, hair and nail conditions." },
+  { label: "Headache or dizziness", dept: "Neurology", note: "Headaches, nerves and balance." },
+  { label: "Child unwell", dept: "Pediatrics", note: "Care for infants and children." },
+  { label: "Ear, nose or throat", dept: "ENT", note: "Sinus, hearing and throat problems." },
+];
 export function Home({ setPage, isAuthenticated = false }) {
+  const [symptom, setSymptom] = useState(null);
+  const start = () => setPage(isAuthenticated ? "hospitals" : "login");
   return (
     <>
-      <Top setPage={setPage} />
+      <Top page="home" setPage={setPage} />
       <main className="home">
-        <section className="hero">
-          <div className="hero-copy">
-            <span className="eyebrow">
-              Healthier Employees, Stronger Tomorrow
-            </span>
-            <h1>
-              Your Health.
-              <br />
-              <em>Our Priority.</em>
-            </h1>
-            <p>
-              Book appointments with our trusted partner hospitals easily and
-              conveniently.
-            </p>
-            <Btn
-              className="hero-login"
-              onClick={() => setPage(isAuthenticated ? "hospitals" : "login")}
-            >
-              {isAuthenticated ? "Explore partner hospitals" : "Login to Medi-Slot"}
-              <ArrowRight size={16} />
-            </Btn>
-          </div>
-          <div className="hero-building">
-            <div className="sun"></div>
-            <div className="hospital-art">
-              <span>+</span>
-              <b>
-                CITY CARE
-                <br />
-                HOSPITAL
-              </b>
+        <div className="wrap">
+          <section className="hero">
+            <div>
+              <span className="eyebrow">Motherson Employee Care Network</span>
+              <h1>
+                Care, without
+                <em>the wait.</em>
+              </h1>
+              <p className="hero-lead">
+                Find the right doctor, see live hospital availability, and book from one employee portal.
+              </p>
+              <div className="hero-actions">
+                <Btn onClick={start}>
+                  Find a doctor <ArrowRight size={17} />
+                </Btn>
+                <Btn kind="outline" onClick={() => document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" })}>
+                  See how it works
+                </Btn>
+              </div>
+              <div className="hero-assure">
+                <span><Check /> Live availability</span>
+                <span><Check /> Verified specialists</span>
+                <span><Check /> Employee-only access</span>
+              </div>
+            </div>
+            <div className="hero-visual" aria-hidden="true">
+              <div className="appt-card">
+                <header>
+                  <div>
+                    <span className="kicker">Next appointment</span>
+                    <h3>Cardiology consult</h3>
+                  </div>
+                  <span className="pill green"><Check size={12} /> Confirmed</span>
+                </header>
+                <div className="appt-doc">
+                  <div className="avatar">AR</div>
+                  <div>
+                    <b>Dr. Ananya Rao</b>
+                    <small>Senior Cardiologist · 12 years</small>
+                  </div>
+                  <ShieldCheck size={18} />
+                </div>
+                <div className="appt-when">
+                  <div><CalendarDays size={18} /><span><small>Date</small><b>Thu, 12 Nov</b></span></div>
+                  <div><Clock3 size={18} /><span><small>Time</small><b>10:30 AM</b></span></div>
+                </div>
+                <p className="appt-where"><MapPin size={14} /> Motherson Hospital · Pune</p>
+                <div className="appt-bars"><i className="on" /><i className="on" /><i className="on" /><i /><i /></div>
+              </div>
+            </div>
+          </section>
+
+          <section className="benefits" aria-label="Why MediSlot">
+            {[
+              [ShieldCheck, "Trusted partner hospitals", "Network hospitals chosen for Motherson employees."],
+              [Stethoscope, "Wide range of specialties", "From general medicine to cardiology and more."],
+              [CalendarDays, "Easy appointment booking", "Pick a day and slot in a few taps."],
+              [HeartPulse, "Better employee wellbeing", "Care that fits around your shift."],
+            ].map(([I, t, d]) => (
+              <div key={t}>
+                <span><I size={20} /></span>
+                <b>{t}</b>
+                <p>{d}</p>
+              </div>
+            ))}
+          </section>
+        </div>
+
+        <section className="section" id="how-it-works">
+          <div className="wrap">
+            <div className="section-head">
+              <span className="eyebrow">How it works</span>
+              <h2>From “not feeling well” to booked in three steps</h2>
+              <p>Everything happens in one place, so you can get back to your day.</p>
+            </div>
+            <div className="steps">
+              {STEPS.map(([t, d], i) => (
+                <article className="step" key={t}>
+                  <div className="step-num">{i + 1}</div>
+                  <h3>{t}</h3>
+                  <p>{d}</p>
+                </article>
+              ))}
             </div>
           </div>
         </section>
-        <section className="benefits">
-          {[
-            [ShieldCheck, "Trusted Partner Hospitals"],
-            [HeartPulse, "Wide Range of Specialties"],
-            [CalendarDays, "Easy Appointment Booking"],
-            [HeartPulse, "Better Employee Wellbeing"],
-          ].map(([I, t], i) => (
-            <div
-              className="reveal"
-              style={{ animationDelay: `${0.15 + i * 0.1}s` }}
-              key={t}
-            >
-              <span>
-                <I />
-              </span>
-              <p>{t}</p>
+
+        <section className="section alt" id="check-symptoms">
+          <div className="wrap symptom-box">
+            <div>
+              <div className="section-head" style={{ marginBottom: 28 }}>
+                <span className="eyebrow">Check symptoms</span>
+                <h2>Not sure who to see?</h2>
+                <p>Pick what you are experiencing and we will point you to the right department.</p>
+              </div>
+              <div className="chips">
+                {SYMPTOMS.map((x) => (
+                  <button key={x.label} type="button" className={"chip" + (symptom?.label === x.label ? " on" : "")} onClick={() => setSymptom(x)}>
+                    {x.label}
+                  </button>
+                ))}
+              </div>
             </div>
-          ))}
+            <div className="symptom-result" aria-live="polite">
+              {symptom ? (
+                <>
+                  <span className="kicker">Suggested department</span>
+                  <h3>{symptom.dept}</h3>
+                  <p>{symptom.note}</p>
+                  <Btn onClick={start}>Find a {symptom.dept} doctor <ArrowRight size={16} /></Btn>
+                </>
+              ) : (
+                <>
+                  <span className="kicker">Suggested department</span>
+                  <h3>Select a symptom</h3>
+                  <p>Your suggestion will appear here.</p>
+                </>
+              )}
+              <small>This is a guide to choosing a department, not a diagnosis. For severe or sudden symptoms, call your local emergency number.</small>
+            </div>
+          </div>
         </section>
-        <section className="intro">
-          <span className="eyebrow">CARE MADE SIMPLE</span>
-          <h2>Healthcare that works around you</h2>
-          <p>
-            Find the right specialist, reserve a convenient time, and manage
-            every appointment in one place.
-          </p>
-        </section>
+
+        <div className="wrap" style={{ paddingTop: 80 }}>
+          <div className="cta-band">
+            <h2>Care that fits around your workday.</h2>
+            <Btn onClick={start}>{isAuthenticated ? "Explore partner hospitals" : "Log in to MediSlot"} <ArrowRight size={17} /></Btn>
+          </div>
+          <footer className="site-foot">
+            <span>© {new Date().getFullYear()} MediSlot · Motherson Employee Care Network</span>
+            <span>Pune · Noida · Chennai</span>
+          </footer>
+        </div>
       </main>
     </>
   );
@@ -113,6 +205,7 @@ export function Home({ setPage, isAuthenticated = false }) {
 export function Login({ setPage }) {
   const [id, setId] = useState("");
   const [password, setPassword] = useState("");
+  const [show, setShow] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const submit = async (e) => {
@@ -125,13 +218,8 @@ export function Login({ setPage }) {
       saveSession(response);
       setPage(response.role === "SUPER_ADMIN" ? "superAdmin" : response.role === "ADMIN" ? "admin" : "hospitals");
     } catch (apiError) {
-      const offline =
-        apiError instanceof TypeError || apiError.message === "Failed to fetch";
-      if (offline) {
-        setError("The login service is unavailable. Please start the backend and try again.");
-      } else {
-        setError(apiError.message);
-      }
+      const offline = apiError instanceof TypeError || apiError.message === "Failed to fetch";
+      setError(offline ? "The login service is unavailable. Please start the backend and try again." : apiError.message);
     } finally {
       setLoading(false);
     }
@@ -141,66 +229,56 @@ export function Login({ setPage }) {
     if (e.key === "Enter") submit(e);
   };
   return (
-    <div className="login-page">
-      <div className="login-poster">
-        <div className="poster-shape"></div>
-        <div className="care-illustration">
-          <div className="person">+</div>
-          <div className="laptop"></div>
-        </div>
-        <div>
-          <h2>
-            Better Health
-            <br />
-            Brighter Tomorrows
-          </h2>
-          <p>Book appointments, manage your health and stay productive.</p>
-        </div>
-      </div>
+    <AuthShell setPage={setPage}>
       <form className="login-card" onSubmit={submit}>
-        <Logo onHome={() => setPage("home")} />
-        <h2>Welcome Back</h2>
-        <p>Login to your employee account</p>
-        <label>
-          Employee ID or Email
-          <input
-            value={id}
-            onChange={(e) => setId(e.target.value)}
-            onKeyDown={handleEnter}
-            placeholder="Employee ID or email address"
-            required
-            autoFocus
-          />
+        <span className="kicker">Employee log in</span>
+        <h2>Welcome back</h2>
+        <p>Log in to manage appointments and find care.</p>
+        <label className="field">
+          Employee code
+          <span className="field-box">
+            <UserRound />
+            <input value={id} onChange={(e) => setId(e.target.value)} onKeyDown={handleEnter} placeholder="e.g. EMP1024" autoComplete="username" required autoFocus />
+          </span>
+          <span className="field-hint">Hospital admins log in with their official email.</span>
         </label>
-        <label>
-          Password <a>Forgot Password?</a>
-          <input
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={handleEnter}
-            type="password"
-            placeholder="••••••••"
-            required
-          />
+        <label className="field">
+          Password
+          <span className="field-box">
+            <Lock />
+            <input value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={handleEnter} type={show ? "text" : "password"} placeholder="Enter your password" autoComplete="current-password" required />
+            <button type="button" className="eye" onClick={() => setShow(!show)} aria-label={show ? "Hide password" : "Show password"}>
+              {show ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </span>
         </label>
-        {error && <p className="login-error">{error}</p>}
-        <Btn className="wide">{loading ? "Logging in…" : "Login"}</Btn>
-        {/*<small>*/}
-        {/*  Demo: <b>EMP001</b> or <b>admin.noida@medislot.com</b> ·*/}
-        {/*  password <b>password123</b>*/}
-        {/*</small>*/}
+        {error && <p className="login-error" role="alert">{error}</p>}
+        <Btn className="wide" disabled={loading}>
+          {loading ? "Logging in…" : <>Log in <ArrowRight size={17} /></>}
+        </Btn>
         <p className="login-help">
-          New user? <a>Contact your HR team</a>
+          New to MediSlot? <a onClick={() => setPage("signup")}>Sign up</a>
         </p>
-        <button
-          type="button"
-          className="back-link"
-          onClick={() => setPage("home")}
-        >
-          ← Back to home
-        </button>
+        <p className="login-legal">By continuing you agree to responsible use of employee healthcare services.</p>
       </form>
-    </div>
+    </AuthShell>
+  );
+}
+export function Signup({ setPage }) {
+  return (
+    <AuthShell setPage={setPage}>
+      <div className="login-card">
+        <span className="kicker">New to MediSlot</span>
+        <h2>Get access</h2>
+        <p>MediSlot accounts are created by your HR team from your Motherson employee record.</p>
+        <ul className="access-list">
+          <li><UserRound size={18} /><span><b>Employees:</b> ask HR to set up your account with your employee code.</span></li>
+          <li><Building2 size={18} /><span><b>Hospital admins:</b> your account is created by the Motherson network admin.</span></li>
+        </ul>
+        <Btn className="wide" onClick={() => setPage("login")}>Back to log in <ArrowRight size={17} /></Btn>
+        <p className="login-legal">By continuing you agree to responsible use of employee healthcare services.</p>
+      </div>
+    </AuthShell>
   );
 }
 export function Hospitals({ setPage }) {

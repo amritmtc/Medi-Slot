@@ -46,7 +46,7 @@ function LegacySuperAdminDashboard({ setPage }) {
   const load = () => Promise.all([api.superHospitals(),api.superDashboard()]).then(([h,m])=>{setItems(h);setMetrics(m)}).catch(()=>setError("Unable to load network data."));
   useEffect(()=>{load()},[]);
   const save = async e => { e.preventDefault(); try { editing ? await api.updateHospital(editing,form) : await api.createHospital(form); setEditing(null);setForm({name:"",address:"",city:"",phone:"",email:"",openingTime:"09:00",closingTime:"17:00"});load(); } catch(e){setError(e.message)} };
-  return <><Top admin setPage={setPage}/><main className="portal-main page-enter" style={{marginLeft:0,maxWidth:1200}}><section className="admin-head"><div><h1>Motherson Network Control</h1><p>Manage partner hospitals across Medi-Slot.</p></div></section><div className="stats"><Stat label="Partner Hospitals" num={metrics.hospitals||0} type="today"/><Stat label="Active Hospitals" num={metrics.activeHospitals||0} type="confirmed"/><Stat label="Doctors" num={metrics.doctors||0} type="pending"/><Stat label="Appointments" num={metrics.appointments||0} type="cancelled"/></div><form className="panel" style={{marginTop:22,display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}} onSubmit={save}><h3 style={{gridColumn:"1/-1"}}>{editing?"Edit Hospital":"Add Hospital"}</h3>{["name","address","city","phone","email"].map(k=><input key={k} required type={k==='email'?'email':'text'} placeholder={k} value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})}/>) }<input type="time" value={form.openingTime} onChange={e=>setForm({...form,openingTime:e.target.value})}/><input type="time" value={form.closingTime} onChange={e=>setForm({...form,closingTime:e.target.value})}/><Btn>{editing?"Save changes":"Add hospital"}</Btn></form>{error&&<p className="login-error">{error}</p>}<section className="panel" style={{marginTop:22}}><h3>All Partner Hospitals</h3>{items.map(h=><div className="hospital-card" key={h.id}><div><h3>{h.name}</h3><p>{h.city} · {h.address}</p><p>{h.email}</p></div><span className={'pill '+(h.active?'green':'red')}>{h.active?'Active':'Archived'}</span>{h.active&&<><Btn kind="outline" onClick={()=>{setEditing(h.id);setForm({...h,openingTime:"09:00",closingTime:"17:00"})}}>Edit</Btn><Btn kind="danger-outline" onClick={()=>api.archiveHospital(h.id).then(load)}>Archive</Btn></>}</div>)}</section></main></>;
+  return <><Top admin standalone setPage={setPage}/><main className="portal-main"><section className="admin-head"><div><h1>Motherson Network Control</h1><p>Manage partner hospitals across Medi-Slot.</p></div></section><div className="stats"><Stat label="Partner Hospitals" num={metrics.hospitals||0} type="today"/><Stat label="Active Hospitals" num={metrics.activeHospitals||0} type="confirmed"/><Stat label="Doctors" num={metrics.doctors||0} type="pending"/><Stat label="Appointments" num={metrics.appointments||0} type="cancelled"/></div><form className="panel" onSubmit={save}><h3 style={{gridColumn:"1/-1"}}>{editing?"Edit Hospital":"Add Hospital"}</h3>{["name","address","city","phone","email"].map(k=><input key={k} required type={k==='email'?'email':'text'} placeholder={k} value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})}/>) }<input type="time" value={form.openingTime} onChange={e=>setForm({...form,openingTime:e.target.value})}/><input type="time" value={form.closingTime} onChange={e=>setForm({...form,closingTime:e.target.value})}/><Btn>{editing?"Save changes":"Add hospital"}</Btn></form>{error&&<p className="login-error">{error}</p>}<section className="panel"><h3>All Partner Hospitals</h3>{items.map(h=><div className="hospital-card" key={h.id}><div><h3>{h.name}</h3><p>{h.city} · {h.address}</p><p>{h.email}</p></div><span className={'pill '+(h.active?'green':'red')}>{h.active?'Active':'Archived'}</span>{h.active&&<><Btn kind="outline" onClick={()=>{setEditing(h.id);setForm({...h,openingTime:"09:00",closingTime:"17:00"})}}>Edit</Btn><Btn kind="danger-outline" onClick={()=>api.archiveHospital(h.id).then(load)}>Archive</Btn></>}</div>)}</section></main></>;
 }
 export function SuperAdminDashboard({ setPage }) {
   const emptyHospital = { name: "", address: "", city: "", phone: "", email: "", openingTime: "09:00", closingTime: "17:00", imageUrl: "" };
@@ -90,7 +90,7 @@ export function SuperAdminDashboard({ setPage }) {
     try { await api.updateSuperAdmin(admin.id, { hospitalId: admin.hospitalId, name: admin.name, email: admin.email, active: !admin.active }); setNotice(`Administrator ${admin.active ? "suspended" : "reactivated"}.`); await load(); }
     catch (e) { setError(e.message); }
   };
-  return <><Top admin setPage={setPage}/><main className="portal-main page-enter" style={{ marginLeft: 0, maxWidth: 1200 }}>
+  return <><Top admin standalone setPage={setPage}/><main className="portal-main">
     <section className="admin-head"><div><h1>Motherson Network Control</h1><p>Create partner hospitals and securely assign their hospital administrators.</p></div></section>
     <div className="stats"><Stat label="Partner Hospitals" num={metrics.hospitals || 0} type="today"/><Stat label="Active Hospitals" num={metrics.activeHospitals || 0} type="confirmed"/><Stat label="Hospital Admins" num={metrics.hospitalAdmins || 0} type="pending"/><Stat label="Appointments" num={metrics.appointments || 0} type="cancelled"/></div>
     {notice && <p className="saved-note"><Check size={14}/>{notice}</p>}{error && <p className="login-error">{error}</p>}
@@ -98,8 +98,8 @@ export function SuperAdminDashboard({ setPage }) {
       <form className="panel" onSubmit={createHospital}><h3>Add Partner Hospital</h3>{["name", "address", "city", "phone", "email"].map((field) => <input key={field} required type={field === "email" ? "email" : "text"} placeholder={field === "name" ? "Hospital name" : field[0].toUpperCase() + field.slice(1)} value={hospitalForm[field]} onChange={(e) => setHospitalForm({ ...hospitalForm, [field]: e.target.value })}/>)}<div className="form-time-row"><input required type="time" value={hospitalForm.openingTime} onChange={(e) => setHospitalForm({ ...hospitalForm, openingTime: e.target.value })}/><input required type="time" value={hospitalForm.closingTime} onChange={(e) => setHospitalForm({ ...hospitalForm, closingTime: e.target.value })}/></div><ImageUploader label="Hospital Photo" value={hospitalForm.imageUrl} onChange={(url) => setHospitalForm({ ...hospitalForm, imageUrl: url })} upload={api.uploadHospitalImage}/><Btn>Add Hospital</Btn></form>
       <form className="panel" onSubmit={createAdmin}><h3>Create Hospital Admin</h3><select required value={adminForm.hospitalId} onChange={(e) => setAdminForm({ ...adminForm, hospitalId: e.target.value })}><option value="">Select active hospital</option>{hospitals.filter((hospital) => hospital.active).map((hospital) => <option key={hospital.id} value={hospital.id}>{hospital.name} · {hospital.city}</option>)}</select><input required placeholder="Administrator name" value={adminForm.name} onChange={(e) => setAdminForm({ ...adminForm, name: e.target.value })}/><input required type="email" placeholder="Official email" value={adminForm.email} onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })}/><input required minLength="6" type="password" placeholder="Temporary password" value={adminForm.password} onChange={(e) => setAdminForm({ ...adminForm, password: e.target.value })}/><Btn>Create Credentials</Btn></form>
     </div>
-    <section className="panel" style={{ marginTop: 22 }}><h3>Hospital Administrators</h3><table><thead><tr><th>Name</th><th>Official email</th><th>Hospital</th><th>Status</th><th>Action</th></tr></thead><tbody>{admins.map((admin) => <tr key={admin.id}><td>{admin.name}</td><td>{admin.email}</td><td>{admin.hospitalName}</td><td><span className={'pill ' + (admin.active ? 'green' : 'red')}>{admin.active ? 'Active' : 'Suspended'}</span></td><td><Btn kind="outline" onClick={() => toggleAdmin(admin)}>{admin.active ? 'Suspend' : 'Reactivate'}</Btn></td></tr>)}{!admins.length && <tr><td colSpan="5" className="empty-state">No hospital administrators created yet.</td></tr>}</tbody></table></section>
-    <section className="panel" style={{ marginTop: 22 }}><h3>Partner Hospitals</h3>{hospitals.map((hospital) => <div className="hospital-card" key={hospital.id}><div>{hospital.imageUrl && <img className="thumb" src={hospital.imageUrl} alt=""/>}<h3>{hospital.name}</h3><p>{hospital.address}, {hospital.city}</p><p>{hospital.email}</p></div><span className={'pill ' + (hospital.active ? 'green' : 'red')}>{hospital.active ? 'Active' : 'Archived'}</span><label className="btn outline photo-label">{hospital.imageUrl ? "Change photo" : "Add photo"}<input type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(e) => { const file = e.target.files && e.target.files[0]; e.target.value = ""; if (file) changeHospitalPhoto(hospital, file); }}/></label>{hospital.active && <Btn kind="danger-outline" onClick={() => api.archiveHospital(hospital.id).then(load).catch((e) => setError(e.message))}>Archive</Btn>}</div>)}</section>
+    <section className="panel"><h3>Hospital Administrators</h3><table><thead><tr><th>Name</th><th>Official email</th><th>Hospital</th><th>Status</th><th>Action</th></tr></thead><tbody>{admins.map((admin) => <tr key={admin.id}><td>{admin.name}</td><td>{admin.email}</td><td>{admin.hospitalName}</td><td><span className={'pill ' + (admin.active ? 'green' : 'red')}>{admin.active ? 'Active' : 'Suspended'}</span></td><td><Btn kind="outline" onClick={() => toggleAdmin(admin)}>{admin.active ? 'Suspend' : 'Reactivate'}</Btn></td></tr>)}{!admins.length && <tr><td colSpan="5" className="empty-state">No hospital administrators created yet.</td></tr>}</tbody></table></section>
+    <section className="panel"><h3>Partner Hospitals</h3>{hospitals.map((hospital) => <div className="hospital-card" key={hospital.id}><div>{hospital.imageUrl && <img className="thumb" src={hospital.imageUrl} alt=""/>}<h3>{hospital.name}</h3><p>{hospital.address}, {hospital.city}</p><p>{hospital.email}</p></div><span className={'pill ' + (hospital.active ? 'green' : 'red')}>{hospital.active ? 'Active' : 'Archived'}</span><label className="btn outline photo-label">{hospital.imageUrl ? "Change photo" : "Add photo"}<input type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(e) => { const file = e.target.files && e.target.files[0]; e.target.value = ""; if (file) changeHospitalPhoto(hospital, file); }}/></label>{hospital.active && <Btn kind="danger-outline" onClick={() => api.archiveHospital(hospital.id).then(load).catch((e) => setError(e.message))}>Archive</Btn>}</div>)}</section>
   </main></>;
 }
 function greeting() {
@@ -143,7 +143,7 @@ export function AdminDashboard({ setPage }) {
           </div>
         ))}
       </div>
-      <section className="panel table-panel" style={{marginTop:22}}><div className="panel-top"><h3>Recent Hospital Appointments</h3><a onClick={() => setPage("adminAppointments")}>View all →</a></div><table><thead><tr><th>Date & time</th><th>Employee</th><th>Doctor</th><th>Status</th></tr></thead><tbody>{appointments.map((appointment) => <tr key={appointment.id}><td>{appointment.slot.date} · {appointment.slot.startTime?.slice(0,5)}</td><td>{appointment.employee.name}</td><td>{appointment.doctor.name}</td><td><span className={'pill ' + (appointment.status === 'BOOKED' ? 'yellow' : appointment.status === 'CANCELLED' ? 'red' : 'green')}>{appointment.status}</span></td></tr>)}{dashboard && !appointments.length && <tr><td colSpan="4" className="empty-state">No appointments have been booked at this hospital yet.</td></tr>}</tbody></table></section>
+      <section className="panel table-panel"><div className="panel-top"><h3>Recent Hospital Appointments</h3><a onClick={() => setPage("adminAppointments")}>View all →</a></div><table><thead><tr><th>Date & time</th><th>Employee</th><th>Doctor</th><th>Status</th></tr></thead><tbody>{appointments.map((appointment) => <tr key={appointment.id}><td>{appointment.slot.date} · {appointment.slot.startTime?.slice(0,5)}</td><td>{appointment.employee.name}</td><td>{appointment.doctor.name}</td><td><span className={'pill ' + (appointment.status === 'BOOKED' ? 'yellow' : appointment.status === 'CANCELLED' ? 'red' : 'green')}>{appointment.status}</span></td></tr>)}{dashboard && !appointments.length && <tr><td colSpan="4" className="empty-state">No appointments have been booked at this hospital yet.</td></tr>}</tbody></table></section>
       {error && <p className="login-error">{error}</p>}
     </AdminLayout>
   );
@@ -614,9 +614,9 @@ export function HospitalProfile({ setPage }) {
           <p>Manage your hospital’s information and contact details.</p>
         </div>
       </div>
-      {error && <p className="login-error" style={{ margin: "0 30px 12px" }}>{error}</p>}
+      {error && <p className="login-error">{error}</p>}
       {notice && <p className="settings-ok">{notice}</p>}
-      {!form ? (!error && <p className="muted" style={{ margin: "0 30px" }}>Loading hospital details…</p>) : (
+      {!form ? (!error && <p className="muted">Loading hospital details…</p>) : (
         <form className="hospital-form" onSubmit={save}>
           <div className="form-group">
             <h3>Basic Information</h3>
@@ -698,13 +698,13 @@ export function Reports({ setPage }) {
           {loading ? "Loading…" : "Apply"}
         </Btn>
       </div>
-      {error && <p className="login-error" style={{ margin: "0 30px 12px" }}>{error}</p>}
+      {error && <p className="login-error">{error}</p>}
       <div className="stats">
         {stats.map(([l, n, t]) => <Stat key={t} label={l} num={n} type={t} />)}
       </div>
       {report && (
         <>
-          <section className="panel table-panel" style={{ margin: "0 30px 22px" }}>
+          <section className="panel table-panel">
             <div className="panel-top"><h3>Appointments by Doctor</h3></div>
             <table>
               <thead><tr><th>Doctor</th><th>Department</th><th>Total</th><th>Completed</th><th>Cancelled</th><th>No-show</th></tr></thead>
@@ -716,7 +716,7 @@ export function Reports({ setPage }) {
               </tbody>
             </table>
           </section>
-          <section className="panel" style={{ margin: "0 30px 30px" }}>
+          <section className="panel">
             <div className="panel-top"><h3>Appointments per Day</h3></div>
             <div className="report-bars">
               {report.byDay.map((d) => (
@@ -775,7 +775,7 @@ export function AdminSettings({ setPage }) {
           <p>Manage your administrator account.</p>
         </div>
       </div>
-      {error && <p className="login-error" style={{ margin: "0 30px 12px" }}>{error}</p>}
+      {error && <p className="login-error">{error}</p>}
       {notice && <p className="settings-ok">{notice}</p>}
       {account && (
         <div className="hospital-form">
