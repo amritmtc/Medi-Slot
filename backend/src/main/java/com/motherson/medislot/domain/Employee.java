@@ -22,6 +22,9 @@ public class Employee {
     private String passwordHash;
     @Column(nullable = false)
     private boolean active = true;
+    /** Public https URL of the employee's profile photo (Cloudinary); null when none. */
+    @Column(name = "profile_image_url", length = 500)
+    private String profileImageUrl;
 
     public Long getId() { return id; }
     public String getEmployeeCode() { return employeeCode; }
@@ -38,4 +41,6 @@ public class Employee {
     public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
     public boolean isActive() { return active; }
     public void setActive(boolean active) { this.active = active; }
+    public String getProfileImageUrl() { return profileImageUrl; }
+    public void setProfileImageUrl(String profileImageUrl) { this.profileImageUrl = profileImageUrl; }
 }

@@ -137,7 +137,7 @@ public class AppointmentService {
     }
 
     @Transactional
-    public AppointmentDto cancelMine(AuthUser user, Long id) {
+    public AppointmentDto cancelMine(AuthUser user, Long id, String reason) {
         Appointment a = appointments.findDetailedById(id)
                 .filter(x -> x.getEmployee().getId().equals(user.id()))
                 .orElseThrow(() -> ApiException.notFound("Appointment not found."));
@@ -146,6 +146,7 @@ public class AppointmentService {
         }
         if (hasStarted(a.getSlot())) throw ApiException.conflict("This appointment time has already started.");
         cancel(a, "EMPLOYEE");
+        a.setCancelReason(reason == null || reason.isBlank() ? null : reason.trim());
         return Mapper.appointment(a);
     }
 

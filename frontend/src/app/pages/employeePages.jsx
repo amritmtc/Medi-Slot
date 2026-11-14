@@ -35,6 +35,7 @@ import { mapHospital, mapDoctor } from "../data/mockData";
 import { Logo, Avatar, Btn } from "../components/ui";
 import { EmployeeLayout, AdminLayout, Top } from "../components/navigation";
 import { AuthShell } from "../components/auth";
+import { AvatarUploader } from "../components/ImageUploader";
 import {
   Stat,
   Chart,
@@ -78,7 +79,7 @@ export function Home({ setPage, isAuthenticated = false }) {
               </p>
               <div className="hero-actions">
                 <Btn onClick={start}>
-                  Find a doctor <ArrowRight size={17} />
+                  Browse Partner Hospitals <ArrowRight size={17} />
                 </Btn>
                 <Btn kind="outline" onClick={() => document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" })}>
                   See how it works
@@ -174,7 +175,7 @@ export function Home({ setPage, isAuthenticated = false }) {
                   <span className="kicker">Suggested department</span>
                   <h3>{symptom.dept}</h3>
                   <p>{symptom.note}</p>
-                  <Btn onClick={start}>Find a {symptom.dept} doctor <ArrowRight size={16} /></Btn>
+                  <Btn onClick={start}>Browse Partner Hospitals <ArrowRight size={16} /></Btn>
                 </>
               ) : (
                 <>
@@ -453,9 +454,6 @@ export function Doctors({ setPage }) {
                 </p>
               )}
             </div>
-            <div className="rating">
-              <Star size={15} fill="currentColor" /> {d.rating}
-            </div>
             <Btn onClick={() => { sessionStorage.setItem("medi-slot-doctor-id", d.id); sessionStorage.setItem("medi-slot-doctor-name", d.name); sessionStorage.setItem("medi-slot-slot-date", d.availableOnDate === false && d.nextAvailableDate ? d.nextAvailableDate : doctorDate); setPage("doctor"); }}>View Slots</Btn>
           </article>
         ))}
@@ -551,6 +549,7 @@ export function Slots({ setPage }) {
   const book = async () => { if(!slot)return; try { const appointment=await api.bookAppointment(slot); sessionStorage.setItem("medi-slot-last-appointment",JSON.stringify(appointment));setPage("confirmation"); } catch(e){setError(e.message);} };
   return (
     <EmployeeLayout page="slots" setPage={setPage}>
+      <div className="slot-wrap">
       <button className="back" onClick={() => setPage("doctor")}>
         <ChevronLeft size={16} />
         Back
@@ -568,6 +567,7 @@ export function Slots({ setPage }) {
         <Btn className="wide" onClick={book}>
           Book Appointment
         </Btn>
+      </div>
       </div>
     </EmployeeLayout>
   );
@@ -652,7 +652,7 @@ export function Appointments({ setPage }) {
                 <CalendarDays size={13} />
                 {appointment.slot.date} · {appointment.slot.startTime} – {appointment.slot.endTime}
               </p>
-              {expanded === appointment.id && <div className="appointment-details"><p><b>Appointment ID:</b> #{appointment.id}</p><p><b>Department:</b> {appointment.doctor.department?.name}</p><p><b>Reason:</b> {appointment.reason || "Not specified"}</p></div>}
+              {expanded === appointment.id && <div className="appointment-details"><p><b>Appointment ID:</b> #{appointment.id}</p><p><b>Department:</b> {appointment.doctor.department?.name}</p><p><b>Reason:</b> {appointment.reason || "Not specified"}</p>{appointment.status === "CANCELLED" && <p><b>Cancelled because:</b> {appointment.cancelReason || "Not specified"}</p>}</div>}
             </div>
             <div>
               <Btn kind="outline" onClick={() => setExpanded(expanded === appointment.id ? null : appointment.id)}>{expanded === appointment.id ? "Hide Details" : "View Details"}</Btn>
@@ -669,9 +669,25 @@ export function Appointments({ setPage }) {
     </EmployeeLayout>
   );
 }
+const CANCEL_REASONS = [
+  "Schedule conflict",
+  "Work or shift commitment",
+  "Feeling better, no longer need it",
+  "Booked by mistake",
+  "Booked the wrong doctor or hospital",
+  "Found a more convenient time",
+  "Unable to travel to the hospital",
+  "Personal or family emergency",
+  "Other",
+];
 export function CancelModal({ appointment, close, done }) {
   const [error, setError] = useState("");
-  const cancelAppointment = async () => { try { await api.cancelAppointment(appointment.id); close(); done(); } catch (e) { setError(e.message); } };
+  const [reason, setReason] = useState("");
+  const [other, setOther] = useState("");
+  const cancelAppointment = async () => {
+    const text = reason === "Other" ? other.trim() || "Other" : reason;
+    try { await api.cancelAppointment(appointment.id, text); close(); done(); } catch (e) { setError(e.message); }
+  };
   return (
     <div className="modal-layer">
       <div className="modal">
@@ -690,11 +706,17 @@ export function CancelModal({ appointment, close, done }) {
         </div>
         <label>
           Please select a reason (optional)
-          <select>
-            <option>Select reason</option>
-            <option>Schedule conflict</option>
+          <select value={reason} onChange={(e) => setReason(e.target.value)}>
+            <option value="">Select reason</option>
+            {CANCEL_REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
           </select>
         </label>
+        {reason === "Other" && (
+          <label>
+            Tell us more (optional)
+            <input value={other} maxLength={180} onChange={(e) => setOther(e.target.value)} placeholder="Reason for cancelling" />
+          </label>
+        )}
         <div>
           <Btn kind="outline" onClick={close}>
             No, Keep Appointment
@@ -713,6 +735,16 @@ export function Profile({ setPage }) {
   const [error, setError] = useState("");
   const [saved, setSaved] = useState("");
   useEffect(() => { api.employeeMe().then(setProfile).catch((e) => setError(e.message)); }, []);
+  const savePhoto = async (url) => {
+    setError(""); setSaved("");
+    const updated = await api.setEmployeeImage(url);
+    setProfile((current) => ({ ...current, profileImageUrl: updated.profileImageUrl }));
+    try {
+      const stored = JSON.parse(sessionStorage.getItem("medi-slot-user") || "{}");
+      sessionStorage.setItem("medi-slot-user", JSON.stringify({ ...stored, profileImageUrl: updated.profileImageUrl || null }));
+    } catch { /* header falls back to initials */ }
+    setSaved(url ? "Profile photo updated." : "Profile photo removed.");
+  };
   const save = async (event) => { event.preventDefault(); try { const updated = await api.updateEmployeeMe({ name: profile.name, phone: profile.phone || "", plantLocation: profile.plantLocation || "" }); setProfile(updated); setSaved("Profile updated."); } catch (e) { setError(e.message); } };
   if (!profile) return <EmployeeLayout page="profile" setPage={setPage}><p className="muted">Loading profile…</p>{error && <p className="login-error">{error}</p>}</EmployeeLayout>;
   return (
@@ -721,6 +753,13 @@ export function Profile({ setPage }) {
         <h2>My Profile</h2>
         <p>View and update your personal information.</p>
       </div>
+      <section className="profile-photo-card">
+        <AvatarUploader name={profile.name} value={profile.profileImageUrl || ""} onChange={savePhoto} upload={api.uploadEmployeeImage} />
+        <div>
+          <h3>{profile.name}</h3>
+          <p>{profile.employeeCode}</p>
+        </div>
+      </section>
       <form className="profile-form" onSubmit={save}>
         <label>
           Full Name

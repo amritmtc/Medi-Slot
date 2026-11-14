@@ -545,6 +545,7 @@ export function AdminAppointments({ setPage }) {
                   >
                     {displayStatus(row.status)}
                   </span>
+                  {row.status === "CANCELLED" && row.cancelReason && <small className="cancel-reason">{row.cancelReason}</small>}
                 </td>
                 <td>
                   {row.status === "BOOKED" ? (
@@ -618,6 +619,11 @@ export function HospitalProfile({ setPage }) {
       {notice && <p className="settings-ok">{notice}</p>}
       {!form ? (!error && <p className="muted">Loading hospital details…</p>) : (
         <form className="hospital-form" onSubmit={save}>
+          <div className="form-group wide photo-card">
+            <h3>Hospital photo</h3>
+            <p className="settings-note">Employees see this photo on the Partner Hospitals page. Changes are saved as soon as you pick a photo.</p>
+            <ImageUploader label="Photo" value={form.imageUrl || ""} onChange={changeHospitalPhoto} upload={api.uploadOwnHospitalImage} />
+          </div>
           <div className="form-group">
             <h3>Basic Information</h3>
             <label>Hospital Name<input value={form.name} readOnly /></label>
@@ -626,7 +632,6 @@ export function HospitalProfile({ setPage }) {
             <label>Contact Number *<input required value={form.phone} onChange={set("phone")} /></label>
             <label>Email *<input required type="email" value={form.email} onChange={set("email")} /></label>
             <p className="settings-note">Name and city are managed by Motherson. Contact the network admin to change them.</p>
-            <ImageUploader label="Hospital Photo (shown to employees)" value={form.imageUrl || ""} onChange={changeHospitalPhoto} upload={api.uploadOwnHospitalImage} />
           </div>
           <div className="form-group">
             <h3>Working Hours</h3>

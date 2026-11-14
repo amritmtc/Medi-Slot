@@ -159,3 +159,10 @@ Endpoints: `PUT /api/admin/hospital/image`, `PUT /api/admin/doctors/{id}/image`,
 (body `{"imageUrl": "https://..."}`, empty string removes the photo), and the uploads
 `POST /api/admin/uploads/hospital-image`, `POST /api/admin/uploads/doctor-image`, `POST /api/super-admin/uploads/hospital-image`.
 Admins can only change their own hospital and its doctors.
+
+## Configuration (secrets)
+
+Secrets are **not** stored in `application.yml`. Copy `backend/.env.example` to `backend/.env` and fill it in
+(`DB_PASSWORD`, `JWT_SECRET`, `SUPER_ADMIN_PASSWORD`, and optionally `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET`
+for photo uploads). `.env` is git-ignored. Start the backend from the `backend` folder (`./mvnw spring-boot:run`).
+Without the Cloudinary keys the app still runs, but photo uploads answer "not configured".

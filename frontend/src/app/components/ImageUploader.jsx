@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import { Btn } from "./ui";
+import { Btn, Avatar } from "./ui";
 
 const MAX_BYTES = 5 * 1024 * 1024;
 
@@ -60,6 +60,59 @@ export function ImageUploader({ label, value, onChange, upload }) {
       </div>
       <small className="image-uploader-hint">JPG, PNG or WEBP · max 5 MB</small>
       {error && <p className="login-error">{error}</p>}
+    </div>
+  );
+}
+
+/**
+ * Round profile-photo picker (employee profile). Picking a file uploads it straight away through
+ * `upload(file)` -> { url } and reports the URL with onChange(url); the parent saves it.
+ */
+export function AvatarUploader({ name, value, onChange, upload }) {
+  const inputRef = useRef(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const initial = (name || "").split(" ").filter(Boolean).slice(0, 2).map((p) => p[0]).join("").toUpperCase() || "MS";
+
+  const pick = async (event) => {
+    const file = event.target.files && event.target.files[0];
+    event.target.value = "";
+    if (!file) return;
+    const problem = validateImage(file);
+    if (problem) { setError(problem); return; }
+    setBusy(true);
+    setError("");
+    try {
+      const { url } = await upload(file);
+      await onChange(url);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const remove = async () => {
+    setBusy(true);
+    setError("");
+    try { await onChange(""); } catch (e) { setError(e.message); } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="avatar-uploader">
+      <Avatar doctor={{ image: value, initial, name }} size="large round" />
+      <div>
+        <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={pick} />
+        <div className="image-uploader-actions">
+          <Btn type="button" kind="outline" disabled={busy} onClick={() => inputRef.current.click()}>
+            {busy ? "Saving…" : value ? "Change photo" : "Upload photo"}
+          </Btn>
+          {value && !busy && (
+            <Btn type="button" kind="danger-outline" onClick={remove}>Remove</Btn>
+          )}
+        </div>
+        <small className="image-uploader-hint">JPG, PNG or WEBP · max 5 MB</small>
+        {error && <p className="login-error">{error}</p>}
+      </div>
     </div>
   );
 }

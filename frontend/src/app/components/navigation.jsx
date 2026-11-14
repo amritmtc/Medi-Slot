@@ -12,7 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { Logo } from "./ui";
-import { clearSession } from "../../api";
+import { api, clearSession } from "../../api";
 
 function UserMenu({ admin, setPage }) {
   const [open, setOpen] = useState(false);
@@ -26,6 +26,18 @@ function UserMenu({ admin, setPage }) {
     document.addEventListener("keydown", closeEscape);
     return () => { document.removeEventListener("mousedown", closeOutside); document.removeEventListener("keydown", closeEscape); };
   }, [open]);
+  // Employees: pull the profile photo once per session (the login response does not carry it).
+  const [, bump] = useState(0);
+  useEffect(() => {
+    if (admin || sessionStorage.getItem("medi-slot-role") !== "employee" || sessionStorage.getItem("medi-slot-photo-checked")) return;
+    sessionStorage.setItem("medi-slot-photo-checked", "1");
+    api.employeeMe().then((me) => {
+      let stored = {};
+      try { stored = JSON.parse(sessionStorage.getItem("medi-slot-user") || "{}"); } catch { stored = {}; }
+      sessionStorage.setItem("medi-slot-user", JSON.stringify({ ...stored, profileImageUrl: me.profileImageUrl || null }));
+      bump((n) => n + 1);
+    }).catch(() => {});
+  }, [admin]);
   let user = {};
   try {
     user = JSON.parse(sessionStorage.getItem("medi-slot-user") || "{}");
@@ -45,7 +57,7 @@ function UserMenu({ admin, setPage }) {
   return (
     <div className="user-menu" ref={menuRef} onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
       <button className="avatar user user-menu-trigger" onClick={() => setOpen(true)} aria-label="Open profile menu" aria-expanded={open}>
-        {initials || "MS"}
+        {user.profileImageUrl ? <img className="avatar-img" src={user.profileImageUrl} alt="" /> : initials || "MS"}
       </button>
       {open && (
         <div className="profile-dropdown-wrap">

@@ -114,7 +114,11 @@ public final class Dtos {
     public record EmployeeBrief(Long id, String name, String employeeCode, String email) {}
 
     public record AppointmentDto(Long id, String status, String reason, Instant createdAt,
-                                 DoctorBrief doctor, HospitalRef hospital, SlotDto slot, EmployeeBrief employee) {}
+                                 DoctorBrief doctor, HospitalRef hospital, SlotDto slot, EmployeeBrief employee,
+                                 String cancelReason) {}
+
+    /** Optional body of PUT /appointments/{id}/cancel. */
+    public record CancelRequest(@Size(max = 200) String reason) {}
 
     public record AdminDashboardDto(String hospitalName, long todayAppointments, long pendingAppointments,
                                     long completedToday, long doctorsAvailableToday) {}
@@ -141,7 +145,7 @@ public final class Dtos {
 
     // ---------- employee ----------
     public record EmployeeDto(Long id, String name, String employeeCode, String email, String phone,
-                              String plantLocation) {}
+                              String plantLocation, String profileImageUrl) {}
 
     public record EmployeeUpdateRequest(
             @NotBlank @Size(max = 150) String name,

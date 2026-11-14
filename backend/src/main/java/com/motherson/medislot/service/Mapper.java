@@ -58,12 +58,13 @@ public final class Mapper {
                 new DoctorBrief(d.getId(), d.getName(), d.getSpecialization(), department(d.getDepartment())),
                 hospitalRef(a.getHospital()),
                 slot(a.getSlot()),
-                new EmployeeBrief(e.getId(), e.getName(), e.getEmployeeCode(), e.getEmail()));
+                new EmployeeBrief(e.getId(), e.getName(), e.getEmployeeCode(), e.getEmail()),
+                a.getCancelReason());
     }
 
     public static EmployeeDto employee(Employee e) {
         return new EmployeeDto(e.getId(), e.getName(), e.getEmployeeCode(), e.getEmail(), e.getPhone(),
-                e.getPlantLocation());
+                e.getPlantLocation(), e.getProfileImageUrl());
     }
 
     public static AdminAccountDto adminAccount(HospitalAdmin a) {

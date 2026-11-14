@@ -5,8 +5,10 @@ import com.motherson.medislot.security.AuthUser;
 import com.motherson.medislot.service.*;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -20,16 +22,19 @@ public class EmployeeController {
     private final AppointmentService appointments;
     private final EmployeeService employees;
     private final com.motherson.medislot.repository.DepartmentRepository departments;
+    private final ImageStorageService images;
 
     public EmployeeController(HospitalService hospitals, DoctorService doctors, SlotService slots,
                               AppointmentService appointments, EmployeeService employees,
-                              com.motherson.medislot.repository.DepartmentRepository departments) {
+                              com.motherson.medislot.repository.DepartmentRepository departments,
+                              ImageStorageService images) {
         this.hospitals = hospitals;
         this.doctors = doctors;
         this.slots = slots;
         this.appointments = appointments;
         this.employees = employees;
         this.departments = departments;
+        this.images = images;
     }
 
     // ----- hospitals -----
@@ -88,8 +93,9 @@ public class EmployeeController {
     }
 
     @PutMapping("/appointments/{id}/cancel")
-    public AppointmentDto cancel(@AuthenticationPrincipal AuthUser user, @PathVariable Long id) {
-        return appointments.cancelMine(user, id);
+    public AppointmentDto cancel(@AuthenticationPrincipal AuthUser user, @PathVariable Long id,
+                                 @Valid @RequestBody(required = false) CancelRequest request) {
+        return appointments.cancelMine(user, id, request == null ? null : request.reason());
     }
 
     // ----- profile -----
@@ -101,5 +107,16 @@ public class EmployeeController {
     @PutMapping("/employees/me")
     public EmployeeDto updateMe(@AuthenticationPrincipal AuthUser user, @Valid @RequestBody EmployeeUpdateRequest request) {
         return employees.update(user, request);
+    }
+
+    // ----- profile photo (upload first, then save the returned URL) -----
+    @PostMapping(value = "/employees/uploads/profile-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ImageUploadDto uploadProfileImage(@RequestParam("file") MultipartFile file) {
+        return new ImageUploadDto(images.upload(file, "medislot/employees"));
+    }
+
+    @PutMapping("/employees/me/image")
+    public EmployeeDto setProfileImage(@AuthenticationPrincipal AuthUser user, @Valid @RequestBody ImageUrlRequest request) {
+        return employees.updateImage(user, request.imageUrl());
     }
 }

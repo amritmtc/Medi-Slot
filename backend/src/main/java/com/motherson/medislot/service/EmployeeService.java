@@ -32,4 +32,12 @@ public class EmployeeService {
         e.setPlantLocation(req.plantLocation() == null || req.plantLocation().isBlank() ? null : req.plantLocation().trim());
         return Mapper.employee(e);
     }
+
+    /** The employee sets (https URL) or removes ("") their own profile photo. */
+    @Transactional
+    public EmployeeDto updateImage(AuthUser user, String imageUrl) {
+        Employee e = employees.findById(current.employee(user).getId()).orElseThrow();
+        e.setProfileImageUrl(imageUrl == null || imageUrl.isBlank() ? null : imageUrl.trim());
+        return Mapper.employee(e);
+    }
 }

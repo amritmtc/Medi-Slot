@@ -38,6 +38,9 @@ public class Appointment {
     /** EMPLOYEE or ADMIN when cancelled. */
     @Column(name = "cancelled_by", length = 20)
     private String cancelledBy;
+    /** Why the employee cancelled (optional, picked from a list or typed). */
+    @Column(name = "cancel_reason", length = 200)
+    private String cancelReason;
 
     public Long getId() { return id; }
     public Employee getEmployee() { return employee; }
@@ -56,4 +59,6 @@ public class Appointment {
     public Instant getUpdatedAt() { return updatedAt; }
     public String getCancelledBy() { return cancelledBy; }
     public void setCancelledBy(String cancelledBy) { this.cancelledBy = cancelledBy; }
+    public String getCancelReason() { return cancelReason; }
+    public void setCancelReason(String cancelReason) { this.cancelReason = cancelReason; }
 }
