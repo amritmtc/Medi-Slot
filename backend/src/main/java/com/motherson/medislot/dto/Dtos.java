@@ -154,7 +154,7 @@ public final class Dtos {
 
     // ---------- super admin ----------
     public record SuperDashboardDto(long hospitals, long activeHospitals, long hospitalAdmins,
-                                    long doctors, long appointments) {}
+                                    long doctors, long appointments, long cancelledAppointments) {}
 
     public record AdminAccountDto(Long id, String name, String email, Long hospitalId, String hospitalName,
                                   boolean active) {}

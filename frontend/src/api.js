@@ -73,6 +73,7 @@ export const api = {
   createHospital: (hospital) => request('/super-admin/hospitals', { method: 'POST', body: JSON.stringify(hospital) }),
   updateHospital: (id, hospital) => request(`/super-admin/hospitals/${id}`, { method: 'PUT', body: JSON.stringify(hospital) }),
   archiveHospital: (id) => request(`/super-admin/hospitals/${id}`, { method: 'DELETE' }),
+  restoreHospital: (id) => request(`/super-admin/hospitals/${id}/restore`, { method: 'PUT' }),
   superAdmins: (params = {}) => request(`/super-admin/admins?${new URLSearchParams(Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== '')).toString()}`),
   createSuperAdmin: (admin) => request('/super-admin/admins', { method: 'POST', body: JSON.stringify(admin) }),
   updateSuperAdmin: (id, admin) => request(`/super-admin/admins/${id}`, { method: 'PUT', body: JSON.stringify(admin) }),

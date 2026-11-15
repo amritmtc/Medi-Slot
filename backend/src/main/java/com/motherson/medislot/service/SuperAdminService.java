@@ -1,5 +1,6 @@
 package com.motherson.medislot.service;
 
+import com.motherson.medislot.domain.AppointmentStatus;
 import com.motherson.medislot.domain.Hospital;
 import com.motherson.medislot.domain.HospitalAdmin;
 import com.motherson.medislot.dto.Dtos.*;
@@ -38,7 +39,7 @@ public class SuperAdminService {
     @Transactional(readOnly = true)
     public SuperDashboardDto dashboard() {
         return new SuperDashboardDto(hospitals.count(), hospitals.countByActiveTrue(), admins.count(),
-                doctors.count(), appointments.count());
+                doctors.count(), appointments.count(), appointments.countByStatus(AppointmentStatus.CANCELLED));
     }
 
     // ---------- hospitals ----------
@@ -70,6 +71,7 @@ public class SuperAdminService {
     @Transactional
     public SuperHospitalDto setHospitalImage(Long id, String imageUrl) {
         Hospital h = hospitals.findById(id).orElseThrow(() -> ApiException.notFound("Hospital not found."));
+        if (!h.isActive()) throw ApiException.conflict("This hospital is archived. Unarchive it before changing its photo.");
         h.setImageUrl(imageUrl == null || imageUrl.isBlank() ? null : imageUrl.trim());
         return Mapper.superHospital(h);
     }
@@ -99,6 +101,9 @@ public class SuperAdminService {
         if (req.password() == null || req.password().length() < 6) {
             throw ApiException.badRequest("password: must be at least 6 characters.");
         }
+        if (!admins.findByHospitalIdOrderByNameAsc(hospital.getId()).isEmpty()) {
+            throw ApiException.conflict("This hospital already has an administrator. Only one admin account is allowed per hospital.");
+        }
         String email = req.email().trim().toLowerCase();
         if (emailTaken(email)) throw ApiException.conflict("This e-mail is already used by another account.");
 
@@ -117,6 +122,11 @@ public class SuperAdminService {
         HospitalAdmin a = admins.findById(id).orElseThrow(() -> ApiException.notFound("Administrator not found."));
         Hospital hospital = hospitals.findById(req.hospitalId())
                 .orElseThrow(() -> ApiException.badRequest("Selected hospital does not exist."));
+        // moving an admin to another hospital must not give that hospital a second administrator
+        if (!hospital.getId().equals(a.getHospital().getId())
+                && !admins.findByHospitalIdOrderByNameAsc(hospital.getId()).isEmpty()) {
+            throw ApiException.conflict("That hospital already has an administrator. Only one admin account is allowed per hospital.");
+        }
         String email = req.email().trim().toLowerCase();
         if (!email.equalsIgnoreCase(a.getEmail()) && emailTaken(email)) {
             throw ApiException.conflict("This e-mail is already used by another account.");

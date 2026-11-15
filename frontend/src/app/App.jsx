@@ -1,4 +1,4 @@
-import React, { useCallback, useReducer, useState } from "react";
+import React, { useCallback, useEffect, useReducer, useState } from "react";
 import "../styles.css";
 import {
   Home,
@@ -18,20 +18,35 @@ import {
   AdminDoctors,
   Schedule,
   AddDoctor,
-  AdminAppointments,
   HospitalProfile,
   Reports,
   AdminSettings,
   SuperAdminDashboard,
 } from "./pages/adminPages";
 
+// The current page lives in the URL hash (#/slots), so refreshing the browser or pressing Back / Forward
+// keeps the visitor where they are instead of dropping them on the landing page.
+const readHash = () => window.location.hash.replace(/^#\/?/, "");
+
 export default function App() {
-  const [page, setRoute] = useState("home");
+  const [page, setRoute] = useState(() => readHash() || "home");
   const [, refresh] = useReducer((n) => n + 1, 0);
   // Always re-render on navigation, even to the same page (e.g. logging out while on "home").
-  const setPage = useCallback((next) => { setRoute(next); refresh(); }, []);
-  // The session is kept in sessionStorage by the login flow. Reading it here
-  // makes the shared landing-page header react correctly after navigation.
+  // {replace: true} swaps the current history entry (used after log in / log out so Back does not return to them).
+  const setPage = useCallback((next, { replace = false } = {}) => {
+    if (readHash() !== next) {
+      if (replace) window.history.replaceState(null, "", `#/${next}`);
+      else window.history.pushState(null, "", `#/${next}`);
+    }
+    setRoute(next);
+    refresh();
+    window.scrollTo(0, 0);
+  }, []);
+  useEffect(() => {
+    const onHistory = () => { setRoute(readHash() || "home"); refresh(); window.scrollTo(0, 0); };
+    window.addEventListener("popstate", onHistory);
+    return () => window.removeEventListener("popstate", onHistory);
+  }, []);
   const isAuthenticated = Boolean(sessionStorage.getItem("medi-slot-token"));
   const role = sessionStorage.getItem("medi-slot-role"); // employee | admin | superAdmin
   const pages = {
@@ -50,7 +65,6 @@ export default function App() {
     adminDoctors: <AdminDoctors setPage={setPage} />,
     addDoctor: <AddDoctor setPage={setPage} />,
     schedule: <Schedule setPage={setPage} />,
-    adminAppointments: <AdminAppointments setPage={setPage} />,
     hospitalProfile: <HospitalProfile setPage={setPage} />,
     reports: <Reports setPage={setPage} />,
     settings: <AdminSettings setPage={setPage} />,
@@ -60,10 +74,17 @@ export default function App() {
   // otherwise the visitor is sent to the login screen.
   const employeePages = ["hospitals", "hospitalExplore", "doctors", "doctor", "slots", "confirmation", "appointments", "profile"];
   const adminPages = ["admin", "adminDoctors", "addDoctor", "schedule", "adminAppointments", "hospitalProfile", "reports", "settings"];
-  let current = pages[page] ? page : role === "admin" ? "admin" : role === "superAdmin" ? "superAdmin" : "home";
+  const home = role === "admin" ? "admin" : role === "superAdmin" ? "superAdmin" : role === "employee" ? "hospitals" : "home";
+  let current = pages[page] ? page : home;
   if (employeePages.includes(current) && role !== "employee") current = "login";
   if (adminPages.includes(current) && role !== "admin") current = "login";
   if (current === "superAdmin" && role !== "superAdmin") current = "login";
+  // a signed-in user pressing Back onto the log in / sign up screens goes to their own dashboard instead
+  if ((current === "login" || current === "signup") && role) current = home;
+  // keep the address bar in step when the guard redirected (without adding history entries)
+  useEffect(() => {
+    if (readHash() !== current) window.history.replaceState(null, "", `#/${current}`);
+  });
   return (
     <>
       {pages[current]}

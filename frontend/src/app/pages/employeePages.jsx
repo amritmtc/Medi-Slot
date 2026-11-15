@@ -35,6 +35,8 @@ import { mapHospital, mapDoctor } from "../data/mockData";
 import { Logo, Avatar, Btn } from "../components/ui";
 import { EmployeeLayout, AdminLayout, Top } from "../components/navigation";
 import { AuthShell } from "../components/auth";
+import { DateField } from "../components/pickers";
+import { statusLabel, statusTone } from "../components/ui";
 import { AvatarUploader } from "../components/ImageUploader";
 import {
   Stat,
@@ -217,7 +219,7 @@ export function Login({ setPage }) {
     try {
       const response = await api.login(id, password);
       saveSession(response);
-      setPage(response.role === "SUPER_ADMIN" ? "superAdmin" : response.role === "ADMIN" ? "admin" : "hospitals");
+      setPage(response.role === "SUPER_ADMIN" ? "superAdmin" : response.role === "ADMIN" ? "admin" : "hospitals", { replace: true });
     } catch (apiError) {
       const offline = apiError instanceof TypeError || apiError.message === "Failed to fetch";
       setError(offline ? "The login service is unavailable. Please start the backend and try again." : apiError.message);
@@ -368,6 +370,7 @@ export function Doctors({ setPage }) {
   const [department, setDepartment] = useState("All Departments");
   const [query, setQuery] = useState("");
   const localToday = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
+  const lastBookable = (() => { const d = new Date(`${localToday}T12:00:00`); d.setDate(d.getDate() + 13); return new Intl.DateTimeFormat("en-CA").format(d); })();
   const [doctorDate, setDoctorDate] = useState(localToday);
   const [catalog, setCatalog] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -413,7 +416,7 @@ export function Doctors({ setPage }) {
             <option key={x}>{x}</option>
           ))}
         </select>
-        <label className="doctor-date"><CalendarDays size={15}/><input type="date" value={doctorDate} min={localToday} max={new Date(Date.now()+13*86400000).toISOString().slice(0,10)} onChange={e=>setDoctorDate(e.target.value)}/></label>
+        <DateField className="filter-date" ariaLabel="Appointment date" value={doctorDate} min={localToday} max={lastBookable} onChange={(v) => v && setDoctorDate(v)} />
         <div className="searchbar">
           <Search size={15} />
           <input
@@ -544,9 +547,9 @@ export function Slots({ setPage }) {
   const localToday = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
   const dateOptions = Array.from({length:14},(_,i)=>{const d=new Date(`${localToday}T12:00:00`);d.setDate(d.getDate()+i);return new Intl.DateTimeFormat("en-CA").format(d)});
   const preferredDate = sessionStorage.getItem("medi-slot-slot-date");
-  const [date, setDate] = useState(dateOptions.includes(preferredDate) ? preferredDate : localToday), [slots, setSlots] = useState([]), [slot, setSlot] = useState(null), [error,setError] = useState("");
+  const [date, setDate] = useState(dateOptions.includes(preferredDate) ? preferredDate : localToday), [slots, setSlots] = useState([]), [slot, setSlot] = useState(null), [error,setError] = useState(""), [reason, setReason] = useState("");
   useEffect(()=>{setError("");api.slots(doctorId,date).then(data=>{const permitted=data.filter(s=>s.startTime >= "10:00:00" && s.startTime < "16:00:00" && ["00","30"].includes(s.startTime.slice(3,5)));setSlots(permitted);setSlot(permitted[0]?.id||null)}).catch(e=>setError(e.message));},[doctorId,date]);
-  const book = async () => { if(!slot)return; try { const appointment=await api.bookAppointment(slot); sessionStorage.setItem("medi-slot-last-appointment",JSON.stringify(appointment));setPage("confirmation"); } catch(e){setError(e.message);} };
+  const book = async () => { if(!slot)return; try { const appointment=await api.bookAppointment(slot, reason.trim()); sessionStorage.setItem("medi-slot-last-appointment",JSON.stringify(appointment));setPage("confirmation"); } catch(e){setError(e.message);} };
   return (
     <EmployeeLayout page="slots" setPage={setPage}>
       <div className="slot-wrap">
@@ -563,6 +566,11 @@ export function Slots({ setPage }) {
           {slots.map(s => <button onClick={()=>setSlot(s.id)} className={slot===s.id?"chosen":""} key={s.id}>{new Date(`1970-01-01T${s.startTime}`).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"})}</button>)}
         </div>
         {!slots.length && !error && <p className="empty-slots">No slots are available for this date. Choose another day.</p>}
+        <label className="booking-reason">
+          Reason for visit <small>(optional)</small>
+          <textarea rows="3" maxLength={300} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Fever and cough for three days, follow-up check-up, routine health review…" />
+          <span className="char-count">{reason.length}/300</span>
+        </label>
         {error && <p className="login-error">{error}</p>}
         <Btn className="wide" onClick={book}>
           Book Appointment
@@ -586,8 +594,7 @@ export function Confirmation({ setPage }) {
           Successfully!
         </h2>
         <p>
-          Your appointment has been booked. You will also receive a confirmation
-          email.
+          Your appointment is confirmed. You can view or cancel it from My Appointments.
         </p>
         <div className="receipt">
           <p>
@@ -607,15 +614,16 @@ export function Confirmation({ setPage }) {
           <p>
             <span>Time</span> {appointment?.slot?.startTime} – {appointment?.slot?.endTime}
           </p>
+          {appointment?.reason && (
+            <p>
+              <span>Reason</span> {appointment.reason}
+            </p>
+          )}
           <p>
-            <span>Status</span> <b className="pill blue">Booked</b>
+            <span>Status</span> <b className="pill green">Confirmed</b>
           </p>
         </div>
         <Btn onClick={() => setPage("appointments")}>View My Appointments</Btn>
-        <Btn kind="outline" onClick={() => {}}>
-          <Download size={15} />
-          Download Slip
-        </Btn>
       </div>
     </EmployeeLayout>
   );
@@ -641,7 +649,7 @@ export function Appointments({ setPage }) {
             <div>
               <h3>
                 {d.name}{" "}
-                <span className={"pill " + (appointment.status === "CONFIRMED" ? "green" : appointment.status === "CANCELLED" ? "red" : "blue")}>{appointment.status}</span>
+                <span className={"pill " + statusTone(appointment.status)}>{statusLabel(appointment.status)}</span>
               </h3>
               <p>{d.specialty}</p>
               <p>

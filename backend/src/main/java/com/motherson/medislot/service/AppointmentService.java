@@ -110,7 +110,7 @@ public class AppointmentService {
         a.setDoctor(doctor);
         a.setHospital(hospital);
         a.setSlot(slot);
-        a.setStatus(AppointmentStatus.BOOKED);
+        a.setStatus(AppointmentStatus.CONFIRMED); // confirmed straight away - hospitals do not approve bookings
         String reason = req.reason() == null ? null : req.reason().trim();
         a.setReason(reason == null || reason.isEmpty() ? null : reason);
         appointments.save(a);

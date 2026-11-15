@@ -752,3 +752,68 @@ label.doctor-date > input { height: auto !important; margin: 0 !important; paddi
 /* cancel dialog: wider so both buttons sit side by side */
 .modal { max-width: 520px; }
 .modal > div:last-of-type .btn { flex: 1 1 auto; }
+
+/* ───────────── date & time pickers ───────────── */
+.picker { position: relative; display: block; }
+label > .picker { margin-top: 8px; }
+.picker-field {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; height: 48px; padding: 0 16px;
+  background: #fff; border: 1px solid var(--line-2); border-radius: 12px; font-size: 14.5px; font-weight: 500; color: var(--ink); text-align: left;
+  transition: border-color .15s, box-shadow .15s;
+}
+.picker-field svg { color: var(--faint); flex: none; }
+.picker-field:hover { border-color: var(--cyan); }
+.picker-field:hover svg, .picker-field[aria-expanded="true"] svg { color: var(--teal); }
+.picker-field[aria-expanded="true"] { border-color: var(--cyan); box-shadow: 0 0 0 4px rgba(8, 180, 212, .14); }
+.picker-field .placeholder { color: var(--faint); font-weight: 400; }
+.picker.compact .picker-field { height: 44px; padding: 0 14px; font-size: 14px; border-radius: 10px; }
+.filter-row .picker, .admin-filters .picker { flex: none; width: 200px; }
+.picker-panel {
+  position: absolute; z-index: 60; top: calc(100% + 8px); left: 0; width: 304px; max-width: calc(100vw - 32px); padding: 16px;
+  background: #fff; border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 24px 60px rgba(10, 70, 110, .2);
+  font-weight: 500; text-align: left; cursor: default; animation: drop .16s ease both;
+}
+.picker-panel.up { top: auto; bottom: calc(100% + 8px); }
+.picker-panel.right { left: auto; right: 0; }
+.picker-panel button { font-weight: 600; letter-spacing: -.01em; }
+.picker-cap { display: block; margin-bottom: 8px; font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--teal); }
+.time-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.picker-grid { display: grid; gap: 6px; }
+.picker-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+.picker-grid button, .period-row button, .cal-grid button {
+  height: 36px; border-radius: 9px; border: 1px solid var(--line); background: #fff; font-size: 13.5px; color: var(--ink-2); transition: all .12s;
+}
+.picker-grid button:hover, .period-row button:hover, .cal-grid button:hover:not(:disabled) { border-color: var(--cyan); color: var(--teal); }
+.picker-grid button.on, .period-row button.on, .cal-grid button.on { background: var(--brand); border-color: transparent; color: #fff; box-shadow: var(--shadow-btn); }
+.period-row { display: flex; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+.period-row button { flex: 1; }
+.period-row .picker-done { flex: 1.4; background: var(--tint-2); border-color: #cfe7f0; color: var(--teal); }
+.cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.cal-head b { font-size: 14.5px; letter-spacing: -.02em; color: var(--ink); }
+.cal-nav { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 9px; border: 1px solid var(--line); background: #fff; color: var(--ink-2); }
+.cal-nav:hover { border-color: var(--cyan); color: var(--teal); }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-week { margin-bottom: 4px; }
+.cal-week span { text-align: center; padding: 4px 0; font-size: 11px; font-weight: 700; color: var(--muted); }
+.cal-grid button.today:not(.on) { border-color: var(--cyan); color: var(--teal); }
+.cal-grid button:disabled { opacity: .35; cursor: not-allowed; }
+.cal-foot { display: flex; justify-content: space-between; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.cal-foot button { font-size: 13px; color: var(--blue); }
+.cal-foot button:disabled { opacity: .4; cursor: not-allowed; }
+.form-time-row { margin-bottom: 12px; }
+.form-time-row label { display: block; }
+
+/* KPI cards: 3 or 4 cards share the row evenly */
+.stats { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+@media (max-width: 1020px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px) { .stats { grid-template-columns: 1fr; } }
+
+/* archived hospital: photo button locked */
+.btn.disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
+.btn.outline.disabled:hover { transform: none; border-color: var(--line-2); color: var(--ink); box-shadow: none; }
+
+/* reason for visit (below the time slots) */
+.booking-reason { display: block; margin-top: 26px; font-size: 13.5px; }
+.booking-reason small { color: var(--muted); font-weight: 500; }
+.booking-reason textarea { min-height: 96px; }
+.char-count { display: block; margin-top: 4px; text-align: right; font-size: 12px; font-weight: 500; color: var(--faint); }

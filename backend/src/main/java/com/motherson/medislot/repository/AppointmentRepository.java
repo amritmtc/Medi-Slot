@@ -21,6 +21,9 @@ import java.util.Optional;
 
 public interface AppointmentRepository extends JpaRepository<Appointment, Long>, JpaSpecificationExecutor<Appointment> {
 
+    /** Network-wide count for one status (super admin dashboard). */
+    long countByStatus(AppointmentStatus status);
+
     /** Report source: appointment counts per day / doctor / status for one hospital. */
     @Query("""
             select s.slotDate, d.id, d.name, dep.name, a.status, count(a)

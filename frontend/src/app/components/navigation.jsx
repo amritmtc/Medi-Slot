@@ -51,7 +51,7 @@ function UserMenu({ admin, setPage }) {
   const logout = () => {
     clearSession();
     setOpen(false);
-    setPage("home");
+    setPage("home", { replace: true });
   };
 
   return (
@@ -158,7 +158,6 @@ export function AdminLayout({ page, setPage, children }) {
         <Logo admin onHome={() => go("admin")} />
         {[
           ["admin", LayoutDashboard, "Dashboard"],
-          ["adminAppointments", CalendarDays, "Appointments"],
           ["adminDoctors", Stethoscope, "Doctors"],
           ["schedule", ClipboardList, "Schedules"],
           ["hospitalProfile", Hospital, "Hospital profile"],

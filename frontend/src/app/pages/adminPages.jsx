@@ -30,7 +30,8 @@ import {
 import { api, saveSession } from "../../api";
 import { ImageUploader, validateImage } from "../components/ImageUploader";
 import { hospitals, doctors, mapHospital, mapDoctor } from "../data/mockData";
-import { Logo, Avatar, Btn } from "../components/ui";
+import { Logo, Avatar, Btn, statusLabel, statusTone } from "../components/ui";
+import { TimeField, DateField } from "../components/pickers";
 import { EmployeeLayout, AdminLayout, Top } from "../components/navigation";
 import {
   Stat,
@@ -41,13 +42,6 @@ import {
   DoctorTable,
   FormGroup,
 } from "../components/adminWidgets";
-function LegacySuperAdminDashboard({ setPage }) {
-  const [items, setItems] = useState([]), [metrics, setMetrics] = useState({}), [error, setError] = useState(""), [form, setForm] = useState({name:"",address:"",city:"",phone:"",email:"",openingTime:"09:00",closingTime:"17:00"}), [editing, setEditing] = useState(null);
-  const load = () => Promise.all([api.superHospitals(),api.superDashboard()]).then(([h,m])=>{setItems(h);setMetrics(m)}).catch(()=>setError("Unable to load network data."));
-  useEffect(()=>{load()},[]);
-  const save = async e => { e.preventDefault(); try { editing ? await api.updateHospital(editing,form) : await api.createHospital(form); setEditing(null);setForm({name:"",address:"",city:"",phone:"",email:"",openingTime:"09:00",closingTime:"17:00"});load(); } catch(e){setError(e.message)} };
-  return <><Top admin standalone setPage={setPage}/><main className="portal-main"><section className="admin-head"><div><h1>Motherson Network Control</h1><p>Manage partner hospitals across Medi-Slot.</p></div></section><div className="stats"><Stat label="Partner Hospitals" num={metrics.hospitals||0} type="today"/><Stat label="Active Hospitals" num={metrics.activeHospitals||0} type="confirmed"/><Stat label="Doctors" num={metrics.doctors||0} type="pending"/><Stat label="Appointments" num={metrics.appointments||0} type="cancelled"/></div><form className="panel" onSubmit={save}><h3 style={{gridColumn:"1/-1"}}>{editing?"Edit Hospital":"Add Hospital"}</h3>{["name","address","city","phone","email"].map(k=><input key={k} required type={k==='email'?'email':'text'} placeholder={k} value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})}/>) }<input type="time" value={form.openingTime} onChange={e=>setForm({...form,openingTime:e.target.value})}/><input type="time" value={form.closingTime} onChange={e=>setForm({...form,closingTime:e.target.value})}/><Btn>{editing?"Save changes":"Add hospital"}</Btn></form>{error&&<p className="login-error">{error}</p>}<section className="panel"><h3>All Partner Hospitals</h3>{items.map(h=><div className="hospital-card" key={h.id}><div><h3>{h.name}</h3><p>{h.city} · {h.address}</p><p>{h.email}</p></div><span className={'pill '+(h.active?'green':'red')}>{h.active?'Active':'Archived'}</span>{h.active&&<><Btn kind="outline" onClick={()=>{setEditing(h.id);setForm({...h,openingTime:"09:00",closingTime:"17:00"})}}>Edit</Btn><Btn kind="danger-outline" onClick={()=>api.archiveHospital(h.id).then(load)}>Archive</Btn></>}</div>)}</section></main></>;
-}
 export function SuperAdminDashboard({ setPage }) {
   const emptyHospital = { name: "", address: "", city: "", phone: "", email: "", openingTime: "09:00", closingTime: "17:00", imageUrl: "" };
   const emptyAdmin = { hospitalId: "", name: "", email: "", password: "" };
@@ -86,20 +80,28 @@ export function SuperAdminDashboard({ setPage }) {
     try { await api.createSuperAdmin({ ...adminForm, hospitalId: Number(adminForm.hospitalId) }); setAdminForm(emptyAdmin); setNotice("Hospital administrator credentials created."); await load(); }
     catch (e) { setError(e.message); }
   };
+  const restoreHospital = async (hospital) => {
+    setError(""); setNotice("");
+    try { await api.restoreHospital(hospital.id); setNotice(`${hospital.name} has been unarchived.`); await load(); }
+    catch (e) { setError(e.message); }
+  };
+  // every hospital can have exactly one administrator account
+  const hospitalsWithAdmin = new Set(admins.map((a) => a.hospitalId));
+  const assignable = hospitals.filter((hospital) => hospital.active && !hospitalsWithAdmin.has(hospital.id));
   const toggleAdmin = async (admin) => {
     try { await api.updateSuperAdmin(admin.id, { hospitalId: admin.hospitalId, name: admin.name, email: admin.email, active: !admin.active }); setNotice(`Administrator ${admin.active ? "suspended" : "reactivated"}.`); await load(); }
     catch (e) { setError(e.message); }
   };
   return <><Top admin standalone setPage={setPage}/><main className="portal-main">
     <section className="admin-head"><div><h1>Motherson Network Control</h1><p>Create partner hospitals and securely assign their hospital administrators.</p></div></section>
-    <div className="stats"><Stat label="Partner Hospitals" num={metrics.hospitals || 0} type="today"/><Stat label="Active Hospitals" num={metrics.activeHospitals || 0} type="confirmed"/><Stat label="Hospital Admins" num={metrics.hospitalAdmins || 0} type="pending"/><Stat label="Appointments" num={metrics.appointments || 0} type="cancelled"/></div>
+    <div className="stats"><Stat label="Partner Hospitals" num={metrics.hospitals || 0} type="today"/><Stat label="Active Hospitals" num={metrics.activeHospitals || 0} type="confirmed"/><Stat label="Total Appointments" num={metrics.appointments || 0} type="today"/><Stat label="Appointments Cancelled" num={metrics.cancelledAppointments || 0} type="cancelled"/></div>
     {notice && <p className="saved-note"><Check size={14}/>{notice}</p>}{error && <p className="login-error">{error}</p>}
     <div className="super-admin-forms">
-      <form className="panel" onSubmit={createHospital}><h3>Add Partner Hospital</h3>{["name", "address", "city", "phone", "email"].map((field) => <input key={field} required type={field === "email" ? "email" : "text"} placeholder={field === "name" ? "Hospital name" : field[0].toUpperCase() + field.slice(1)} value={hospitalForm[field]} onChange={(e) => setHospitalForm({ ...hospitalForm, [field]: e.target.value })}/>)}<div className="form-time-row"><input required type="time" value={hospitalForm.openingTime} onChange={(e) => setHospitalForm({ ...hospitalForm, openingTime: e.target.value })}/><input required type="time" value={hospitalForm.closingTime} onChange={(e) => setHospitalForm({ ...hospitalForm, closingTime: e.target.value })}/></div><ImageUploader label="Hospital Photo" value={hospitalForm.imageUrl} onChange={(url) => setHospitalForm({ ...hospitalForm, imageUrl: url })} upload={api.uploadHospitalImage}/><Btn>Add Hospital</Btn></form>
-      <form className="panel" onSubmit={createAdmin}><h3>Create Hospital Admin</h3><select required value={adminForm.hospitalId} onChange={(e) => setAdminForm({ ...adminForm, hospitalId: e.target.value })}><option value="">Select active hospital</option>{hospitals.filter((hospital) => hospital.active).map((hospital) => <option key={hospital.id} value={hospital.id}>{hospital.name} · {hospital.city}</option>)}</select><input required placeholder="Administrator name" value={adminForm.name} onChange={(e) => setAdminForm({ ...adminForm, name: e.target.value })}/><input required type="email" placeholder="Official email" value={adminForm.email} onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })}/><input required minLength="6" type="password" placeholder="Temporary password" value={adminForm.password} onChange={(e) => setAdminForm({ ...adminForm, password: e.target.value })}/><Btn>Create Credentials</Btn></form>
+      <form className="panel" onSubmit={createHospital}><h3>Add Partner Hospital</h3>{["name", "address", "city", "phone", "email"].map((field) => <input key={field} required type={field === "email" ? "email" : "text"} placeholder={field === "name" ? "Hospital name" : field[0].toUpperCase() + field.slice(1)} value={hospitalForm[field]} onChange={(e) => setHospitalForm({ ...hospitalForm, [field]: e.target.value })}/>)}<div className="form-time-row"><label>Opening time<TimeField ariaLabel="Opening time" value={hospitalForm.openingTime} onChange={(v) => setHospitalForm({ ...hospitalForm, openingTime: v })}/></label><label>Closing time<TimeField ariaLabel="Closing time" align="right" value={hospitalForm.closingTime} onChange={(v) => setHospitalForm({ ...hospitalForm, closingTime: v })}/></label></div><ImageUploader label="Hospital Photo" value={hospitalForm.imageUrl} onChange={(url) => setHospitalForm({ ...hospitalForm, imageUrl: url })} upload={api.uploadHospitalImage}/><Btn>Add Hospital</Btn></form>
+      <form className="panel" onSubmit={createAdmin}><h3>Create Hospital Admin</h3><select required value={adminForm.hospitalId} onChange={(e) => setAdminForm({ ...adminForm, hospitalId: e.target.value })}><option value="">{assignable.length ? "Select hospital without an admin" : "Every active hospital already has an admin"}</option>{assignable.map((hospital) => <option key={hospital.id} value={hospital.id}>{hospital.name} · {hospital.city}</option>)}</select><input required placeholder="Administrator name" value={adminForm.name} onChange={(e) => setAdminForm({ ...adminForm, name: e.target.value })}/><input required type="email" placeholder="Official email" value={adminForm.email} onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })}/><input required minLength="6" type="password" placeholder="Temporary password" value={adminForm.password} onChange={(e) => setAdminForm({ ...adminForm, password: e.target.value })}/><Btn disabled={!assignable.length}>Create Credentials</Btn></form>
     </div>
     <section className="panel"><h3>Hospital Administrators</h3><table><thead><tr><th>Name</th><th>Official email</th><th>Hospital</th><th>Status</th><th>Action</th></tr></thead><tbody>{admins.map((admin) => <tr key={admin.id}><td>{admin.name}</td><td>{admin.email}</td><td>{admin.hospitalName}</td><td><span className={'pill ' + (admin.active ? 'green' : 'red')}>{admin.active ? 'Active' : 'Suspended'}</span></td><td><Btn kind="outline" onClick={() => toggleAdmin(admin)}>{admin.active ? 'Suspend' : 'Reactivate'}</Btn></td></tr>)}{!admins.length && <tr><td colSpan="5" className="empty-state">No hospital administrators created yet.</td></tr>}</tbody></table></section>
-    <section className="panel"><h3>Partner Hospitals</h3>{hospitals.map((hospital) => <div className="hospital-card" key={hospital.id}><div>{hospital.imageUrl && <img className="thumb" src={hospital.imageUrl} alt=""/>}<h3>{hospital.name}</h3><p>{hospital.address}, {hospital.city}</p><p>{hospital.email}</p></div><span className={'pill ' + (hospital.active ? 'green' : 'red')}>{hospital.active ? 'Active' : 'Archived'}</span><label className="btn outline photo-label">{hospital.imageUrl ? "Change photo" : "Add photo"}<input type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(e) => { const file = e.target.files && e.target.files[0]; e.target.value = ""; if (file) changeHospitalPhoto(hospital, file); }}/></label>{hospital.active && <Btn kind="danger-outline" onClick={() => api.archiveHospital(hospital.id).then(load).catch((e) => setError(e.message))}>Archive</Btn>}</div>)}</section>
+    <section className="panel"><h3>Partner Hospitals</h3>{hospitals.map((hospital) => <div className="hospital-card" key={hospital.id}><div>{hospital.imageUrl && <img className="thumb" src={hospital.imageUrl} alt=""/>}<h3>{hospital.name}</h3><p>{hospital.address}, {hospital.city}</p><p>{hospital.email}</p></div><span className={'pill ' + (hospital.active ? 'green' : 'red')}>{hospital.active ? 'Active' : 'Archived'}</span><label className={"btn outline photo-label" + (hospital.active ? "" : " disabled")} title={hospital.active ? "" : "Unarchive this hospital to change its photo"} aria-disabled={!hospital.active}>{hospital.imageUrl ? "Change photo" : "Add photo"}<input type="file" disabled={!hospital.active} accept="image/jpeg,image/png,image/webp" hidden onChange={(e) => { const file = e.target.files && e.target.files[0]; e.target.value = ""; if (file) changeHospitalPhoto(hospital, file); }}/></label>{hospital.active ? <Btn kind="danger-outline" onClick={() => api.archiveHospital(hospital.id).then(load).catch((e) => setError(e.message))}>Archive</Btn> : <Btn kind="outline" onClick={() => restoreHospital(hospital)}>Unarchive</Btn>}</div>)}</section>
   </main></>;
 }
 function greeting() {
@@ -116,7 +118,6 @@ export function AdminDashboard({ setPage }) {
   useEffect(() => { Promise.all([api.adminDashboard(), api.adminAppointments({ size: 5 })]).then(([summary, page]) => { setDashboard(summary); setAppointments(page.content || []); }).catch((e) => setError(e.message)); }, []);
   const stats = dashboard ? [
     ["Today’s Appointments", dashboard.todayAppointments, "today"],
-    ["Awaiting Confirmation", dashboard.pendingAppointments, "pending"],
     ["Completed Today", dashboard.completedToday, "confirmed"],
     ["Available Doctors", dashboard.doctorsAvailableToday, "cancelled"],
   ] : [];
@@ -143,7 +144,7 @@ export function AdminDashboard({ setPage }) {
           </div>
         ))}
       </div>
-      <section className="panel table-panel"><div className="panel-top"><h3>Recent Hospital Appointments</h3><a onClick={() => setPage("adminAppointments")}>View all →</a></div><table><thead><tr><th>Date & time</th><th>Employee</th><th>Doctor</th><th>Status</th></tr></thead><tbody>{appointments.map((appointment) => <tr key={appointment.id}><td>{appointment.slot.date} · {appointment.slot.startTime?.slice(0,5)}</td><td>{appointment.employee.name}</td><td>{appointment.doctor.name}</td><td><span className={'pill ' + (appointment.status === 'BOOKED' ? 'yellow' : appointment.status === 'CANCELLED' ? 'red' : 'green')}>{appointment.status}</span></td></tr>)}{dashboard && !appointments.length && <tr><td colSpan="4" className="empty-state">No appointments have been booked at this hospital yet.</td></tr>}</tbody></table></section>
+      <section className="panel table-panel"><div className="panel-top"><h3>Recent Hospital Appointments</h3></div><table><thead><tr><th>Date & time</th><th>Employee</th><th>Doctor</th><th>Status</th></tr></thead><tbody>{appointments.map((appointment) => <tr key={appointment.id}><td>{appointment.slot.date} · {appointment.slot.startTime?.slice(0,5)}</td><td>{appointment.employee.name}</td><td>{appointment.doctor.name}</td><td><span className={'pill ' + statusTone(appointment.status)}>{statusLabel(appointment.status)}</span>{appointment.status === 'CANCELLED' && appointment.cancelReason && <small className="cancel-reason">{appointment.cancelReason}</small>}</td></tr>)}{dashboard && !appointments.length && <tr><td colSpan="4" className="empty-state">No appointments have been booked at this hospital yet.</td></tr>}</tbody></table></section>
       {error && <p className="login-error">{error}</p>}
     </AdminLayout>
   );
@@ -243,151 +244,6 @@ export function AdminDoctors({ setPage }) {
     </AdminLayout>
   );
 }
-function LegacySchedule({ setPage }) {
-  const [active, setActive] = useState([
-    true,
-    true,
-    true,
-    true,
-    true,
-    false,
-    false,
-  ]);
-  const [leaves, setLeaves] = useState([
-    {
-      date: "12 Jun 2025",
-      from: "09:00 AM",
-      to: "01:00 PM",
-      reason: "Personal Leave",
-    },
-    {
-      date: "20 Jun 2025",
-      from: "02:00 PM",
-      to: "04:00 PM",
-      reason: "Conference",
-    },
-  ]);
-  const [saved, setSaved] = useState(false);
-  const days = [
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-    "Sunday",
-  ];
-  return (
-    <AdminLayout page="schedule" setPage={setPage}>
-      <div className="admin-head">
-        <div>
-          <h1>Doctor Schedule</h1>
-          <p>Manage working days, timings and availability.</p>
-        </div>
-        <select>
-          <option>Dr. Amit Sharma (Cardiology)</option>
-          <option>Dr. Neha Verma (General Medicine)</option>
-        </select>
-      </div>
-      <section className="panel schedule-panel">
-        <div className="panel-top">
-          <h3>Weekly Schedule</h3>
-          <Btn
-            onClick={() =>
-              setActive((a) => a.map((x, i) => (i === 5 ? true : x)))
-            }
-          >
-            <Plus size={14} />
-            Enable Saturday
-          </Btn>
-        </div>
-        {days.map((d, i) => (
-          <div className="schedule-row" key={d}>
-            <b>{d}</b>
-            {active[i] ? (
-              <>
-                <input type="time" defaultValue="09:00" />
-                <input type="time" defaultValue={i === 2 ? "13:00" : "16:00"} />
-                <select>
-                  <option>15 minutes</option>
-                  <option>30 minutes</option>
-                </select>
-              </>
-            ) : (
-              <span className="not-working">Not Working</span>
-            )}
-            <button
-              aria-label={`toggle ${d}`}
-              className={"toggle " + (active[i] ? "on" : "")}
-              onClick={() =>
-                setActive((a) => a.map((x, j) => (j === i ? !x : x)))
-              }
-            ></button>
-          </div>
-        ))}
-        <Btn className="schedule-save" onClick={() => setSaved(true)}>
-          Save Weekly Schedule
-        </Btn>
-        {saved && (
-          <p className="saved-note">
-            <Check size={14} /> Schedule changes saved.
-          </p>
-        )}
-        <hr />
-        <div className="panel-top">
-          <h3>Blocked Slots / Leave</h3>
-          <Btn
-            onClick={() =>
-              setLeaves((l) => [
-                ...l,
-                {
-                  date: "25 Jun 2025",
-                  from: "11:00 AM",
-                  to: "12:00 PM",
-                  reason: "New blocked slot",
-                },
-              ])
-            }
-          >
-            <Plus size={14} />
-            Add Leave / Block Slot
-          </Btn>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>From</th>
-              <th>To</th>
-              <th>Reason</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {leaves.map((l, i) => (
-              <tr key={l.date + l.reason}>
-                <td>{l.date}</td>
-                <td>{l.from}</td>
-                <td>{l.to}</td>
-                <td>{l.reason}</td>
-                <td>
-                  <button
-                    className="delete-leave"
-                    onClick={() =>
-                      setLeaves((x) => x.filter((_, j) => j !== i))
-                    }
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-    </AdminLayout>
-  );
-}
 export function Schedule({ setPage }) {
   const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   const emptySchedule = dayNames.map((_, index) => ({ dayOfWeek: index + 1, active: false, startTime: "09:00", endTime: "16:00", slotDurationMinutes: 30 }));
@@ -413,7 +269,7 @@ export function Schedule({ setPage }) {
     try { const response = await api.replaceDoctorSchedule(doctorId, schedules.filter((schedule) => schedule.active).map(({ active, ...schedule }) => schedule)); setSaved(`Availability saved. ${response.slotsCreated} new booking slots generated.`); }
     catch (e) { setError(e.message); }
   };
-  return <AdminLayout page="schedule" setPage={setPage}><div className="admin-head"><div><h1>Doctor Schedule</h1><p>Manage working days, timings and appointment availability.</p></div><select value={doctorId} onChange={(e) => setDoctorId(e.target.value)}><option value="">Select doctor</option>{doctorRows.map((doctor) => <option value={doctor.id} key={doctor.id}>{doctor.name} · {doctor.department?.name}</option>)}</select></div><section className="panel schedule-panel"><div className="panel-top"><h3>Weekly Schedule</h3><span className="muted">Changes immediately update employee booking availability.</span></div>{schedules.map((schedule, index) => <div className="schedule-row" key={schedule.dayOfWeek}><b>{dayNames[index]}</b>{schedule.active ? <><input type="time" value={schedule.startTime} onChange={(e) => updateDay(index, { startTime: e.target.value })}/><input type="time" value={schedule.endTime} onChange={(e) => updateDay(index, { endTime: e.target.value })}/><select value={schedule.slotDurationMinutes} onChange={(e) => updateDay(index, { slotDurationMinutes: Number(e.target.value) })}><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="45">45 minutes</option><option value="60">60 minutes</option></select></> : <span className="not-working">Not Working</span>}<button aria-label={`toggle ${dayNames[index]}`} className={'toggle ' + (schedule.active ? 'on' : '')} onClick={() => updateDay(index, { active: !schedule.active })}></button></div>)}<Btn className="schedule-save" disabled={!doctorId} onClick={save}>Save Weekly Schedule</Btn>{saved && <p className="saved-note"><Check size={14}/>{saved}</p>}{error && <p className="login-error">{error}</p>}</section></AdminLayout>;
+  return <AdminLayout page="schedule" setPage={setPage}><div className="admin-head"><div><h1>Doctor Schedule</h1><p>Manage working days, timings and appointment availability.</p></div><select value={doctorId} onChange={(e) => setDoctorId(e.target.value)}><option value="">Select doctor</option>{doctorRows.map((doctor) => <option value={doctor.id} key={doctor.id}>{doctor.name} · {doctor.department?.name}</option>)}</select></div><section className="panel schedule-panel"><div className="panel-top"><h3>Weekly Schedule</h3><span className="muted">Changes immediately update employee booking availability.</span></div>{schedules.map((schedule, index) => <div className="schedule-row" key={schedule.dayOfWeek}><b>{dayNames[index]}</b>{schedule.active ? <><TimeField compact ariaLabel={`${dayNames[index]} start time`} value={schedule.startTime} onChange={(v) => updateDay(index, { startTime: v })}/><TimeField compact align="right" ariaLabel={`${dayNames[index]} end time`} value={schedule.endTime} onChange={(v) => updateDay(index, { endTime: v })}/><select value={schedule.slotDurationMinutes} onChange={(e) => updateDay(index, { slotDurationMinutes: Number(e.target.value) })}><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="45">45 minutes</option><option value="60">60 minutes</option></select></> : <span className="not-working">Not Working</span>}<button aria-label={`toggle ${dayNames[index]}`} className={'toggle ' + (schedule.active ? 'on' : '')} onClick={() => updateDay(index, { active: !schedule.active })}></button></div>)}<Btn className="schedule-save" disabled={!doctorId} onClick={save}>Save Weekly Schedule</Btn>{saved && <p className="saved-note"><Check size={14}/>{saved}</p>}{error && <p className="login-error">{error}</p>}</section></AdminLayout>;
 }
 export function AddDoctor({ setPage }) {
   const [departments, setDepartments] = useState([]);
@@ -432,7 +288,7 @@ export function AddDoctor({ setPage }) {
       </div>
       <form className="add-doctor" onSubmit={save}>
         <section className="form-group"><h3>Basic Information</h3><label>Full Name *<input required value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></label><label>Department *<select required value={form.departmentId} onChange={e=>setForm({...form,departmentId:e.target.value})}><option value="">Select department</option>{departments.map(d=><option value={d.id} key={d.id}>{d.name}</option>)}</select></label><label>Specialisation *<input required value={form.specialization} onChange={e=>setForm({...form,specialization:e.target.value})}/></label><label>Experience (Years) *<input required min="0" type="number" value={form.experienceYears} onChange={e=>setForm({...form,experienceYears:e.target.value})}/></label><label>Qualifications *<input required value={form.qualification} onChange={e=>setForm({...form,qualification:e.target.value})}/></label></section><section className="form-group"><h3>Contact & Additional Details</h3>{[["email","Email","email"],["phone","Phone","text"],["consultationFee","Consultation Fee (₹)","number"]].map(([key,label,type])=><label key={key}>{label}<input type={type} value={form[key]} onChange={e=>setForm({...form,[key]:e.target.value})}/></label>)}<ImageUploader label="Doctor Photo" value={form.profileImageUrl} onChange={(url)=>setForm({...form,profileImageUrl:url})} upload={api.uploadDoctorImage}/><label>About<textarea value={form.about} onChange={e=>setForm({...form,about:e.target.value})}/></label></section>
-        <section className="form-group"><h3>Working Schedule</h3><label>Working Days<div>{["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map((day,index)=><button type="button" className={form.workingDays.includes(index+1)?"day-selected":""} key={day} onClick={()=>setForm({...form,workingDays:form.workingDays.includes(index+1)?form.workingDays.filter(x=>x!==index+1):[...form.workingDays,index+1]})}>{day}</button>)}</div></label><label>Start Time<input type="time" value={form.startTime} onChange={e=>setForm({...form,startTime:e.target.value})}/></label><label>End Time<input type="time" value={form.endTime} onChange={e=>setForm({...form,endTime:e.target.value})}/></label><label>Slot Duration<select value={form.slotDurationMinutes} onChange={e=>setForm({...form,slotDurationMinutes:e.target.value})}><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="45">45 minutes</option></select></label><label><input type="checkbox" checked={form.active} onChange={e=>setForm({...form,active:e.target.checked})}/> Active</label></section>
+        <section className="form-group"><h3>Working Schedule</h3><label>Working Days<div>{["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map((day,index)=><button type="button" className={form.workingDays.includes(index+1)?"day-selected":""} key={day} onClick={()=>setForm({...form,workingDays:form.workingDays.includes(index+1)?form.workingDays.filter(x=>x!==index+1):[...form.workingDays,index+1]})}>{day}</button>)}</div></label><label>Start Time<TimeField ariaLabel="Start time" value={form.startTime} onChange={v=>setForm({...form,startTime:v})}/></label><label>End Time<TimeField ariaLabel="End time" value={form.endTime} onChange={v=>setForm({...form,endTime:v})}/></label><label>Slot Duration<select value={form.slotDurationMinutes} onChange={e=>setForm({...form,slotDurationMinutes:e.target.value})}><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="45">45 minutes</option></select></label><label><input type="checkbox" checked={form.active} onChange={e=>setForm({...form,active:e.target.checked})}/> Active</label></section>
         {error && <p className="login-error">{error}</p>}
         <div className="form-actions">
           <Btn type="button" kind="outline" onClick={() => setPage("adminDoctors")}>
@@ -441,142 +297,6 @@ export function AddDoctor({ setPage }) {
           <Btn type="submit" disabled={saving}>{saving ? "Saving…" : "Save Doctor"}</Btn>
         </div>
       </form>
-    </AdminLayout>
-  );
-}
-export function AdminAppointments({ setPage }) {
-  const [status, setStatus] = useState("All Status");
-  const [doctor, setDoctor] = useState("All Doctors");
-  const [date, setDate] = useState("");
-  const [rows, setRows] = useState([]);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
-  const load = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const page = await api.adminAppointments({
-        date: date || undefined,
-        doctorId: doctor === "All Doctors" ? undefined : doctor,
-        status: status === "All Status" ? undefined : status,
-      });
-      setRows(page.content || []);
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-  useEffect(() => { load(); }, []);
-  const changeStatus = async (id, action) => {
-    try {
-      await api.updateAdminAppointment(id, action);
-      await load();
-    } catch (e) {
-      setError(e.message);
-    }
-  };
-  const doctorOptions = [...new Map(rows.map((row) => [row.doctor.id, row.doctor.name])).entries()];
-  const displayStatus = (value) => value.charAt(0) + value.slice(1).toLowerCase();
-  const time = (value) => new Date(`1970-01-01T${value}`).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
-  return (
-    <AdminLayout page="adminAppointments" setPage={setPage}>
-      <div className="admin-head">
-        <div>
-          <h1>All Appointments</h1>
-          <p>View and manage appointments for your hospital.</p>
-        </div>
-      </div>
-      <div className="admin-filters">
-        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-        <select value={doctor} onChange={(e) => setDoctor(e.target.value)}>
-          <option>All Doctors</option>
-          {doctorOptions.map(([id, name]) => (
-            <option key={id} value={id}>{name}</option>
-          ))}
-        </select>
-        <select value={status} onChange={(e) => setStatus(e.target.value)}>
-          <option>All Status</option>
-          <option value="BOOKED">Booked</option>
-          <option value="CONFIRMED">Confirmed</option>
-          <option value="CANCELLED">Cancelled</option>
-          <option value="COMPLETED">Completed</option>
-          <option value="NO_SHOW">No show</option>
-        </select>
-        <Btn onClick={load}>
-          <Search size={15} />
-          Search
-        </Btn>
-      </div>
-      <section className="panel table-panel admin-appointments">
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Date & Time</th>
-              <th>Employee Name</th>
-              <th>Doctor</th>
-              <th>Department</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, i) => (
-              <tr key={row.id}>
-                <td>{i + 1}</td>
-                <td>
-                  {row.slot.date}
-                  <br />{time(row.slot.startTime)}
-                </td>
-                <td>{row.employee.name}</td>
-                <td>{row.doctor.name}</td>
-                <td>{row.doctor.department?.name || "—"}</td>
-                <td>
-                  <span
-                    className={
-                      "pill " +
-                      (row.status === "CONFIRMED" || row.status === "COMPLETED"
-                        ? "green"
-                        : row.status === "BOOKED"
-                          ? "yellow"
-                          : "red")
-                    }
-                  >
-                    {displayStatus(row.status)}
-                  </span>
-                  {row.status === "CANCELLED" && row.cancelReason && <small className="cancel-reason">{row.cancelReason}</small>}
-                </td>
-                <td>
-                  {row.status === "BOOKED" ? (
-                    <>
-                      <button
-                        className="icon-btn approve"
-                        title="Confirm appointment"
-                        onClick={() => changeStatus(row.id, "confirm")}
-                      >
-                        <Check size={14} />
-                      </button>
-                      <button
-                        className="icon-btn reject"
-                        title="Cancel appointment"
-                        onClick={() => changeStatus(row.id, "cancel")}
-                      >
-                        <X size={14} />
-                      </button>
-                    </>
-                  ) : (
-                    <span>—</span>
-                  )}
-                </td>
-              </tr>
-            ))}
-            {!loading && !rows.length && <tr><td colSpan="7" className="empty-state">No appointments have been booked for this hospital.</td></tr>}
-          </tbody>
-        </table>
-      </section>
-      {loading && <p className="muted">Loading appointments…</p>}
-      {error && <p className="login-error">{error}</p>}
     </AdminLayout>
   );
 }
@@ -636,8 +356,8 @@ export function HospitalProfile({ setPage }) {
           <div className="form-group">
             <h3>Working Hours</h3>
             <div className="work-hours">
-              <label>Opening Time<input type="time" required value={form.openingTime} onChange={set("openingTime")} /></label>
-              <label>Closing Time<input type="time" required value={form.closingTime} onChange={set("closingTime")} /></label>
+              <label>Opening Time<TimeField ariaLabel="Opening time" value={form.openingTime} onChange={(v) => setForm({ ...form, openingTime: v })} /></label>
+              <label>Closing Time<TimeField ariaLabel="Closing time" align="right" value={form.closingTime} onChange={(v) => setForm({ ...form, closingTime: v })} /></label>
             </div>
           </div>
           <div className="form-actions">
@@ -666,23 +386,12 @@ export function Reports({ setPage }) {
   const s = report?.summary;
   const stats = s ? [
     ["Total Appointments", s.total, "today"],
-    ["Upcoming (Booked + Confirmed)", s.booked + s.confirmed, "pending"],
+    ["Upcoming (Confirmed)", s.booked + s.confirmed, "pending"],
     ["Completed", s.completed, "confirmed"],
     ["Cancelled / No-show", s.cancelled + s.noShow, "cancelled"],
   ] : [];
   const peak = Math.max(1, ...(report?.byDay || []).map((d) => d.total));
   const label = (value) => new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", weekday: "short" }).format(new Date(`${value}T12:00:00`));
-  const exportCsv = () => {
-    if (!report) return;
-    const rows = [["Doctor", "Department", "Total", "Completed", "Cancelled", "No-show"],
-      ...report.byDoctor.map((d) => [d.doctorName, d.department, d.total, d.completed, d.cancelled, d.noShow])];
-    const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
-    link.download = `appointments-report-${report.from}-to-${report.to}.csv`;
-    link.click();
-    URL.revokeObjectURL(link.href);
-  };
   return (
     <AdminLayout page="reports" setPage={setPage}>
       <div className="admin-head">
@@ -690,14 +399,10 @@ export function Reports({ setPage }) {
           <h1>Reports</h1>
           <p>{report ? `Appointment activity at ${report.hospitalName}.` : "Appointment activity for your hospital."}</p>
         </div>
-        <Btn kind="outline" type="button" onClick={exportCsv} disabled={!report || !report.byDoctor.length}>
-          <Download size={15} />
-          Export CSV
-        </Btn>
       </div>
       <div className="admin-filters">
-        <input type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} aria-label="From date" />
-        <input type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} aria-label="To date" />
+        <DateField ariaLabel="From date" value={from} max={to} onChange={setFrom} />
+        <DateField ariaLabel="To date" value={to} min={from} onChange={setTo} />
         <Btn onClick={load}>
           <Search size={15} />
           {loading ? "Loading…" : "Apply"}
